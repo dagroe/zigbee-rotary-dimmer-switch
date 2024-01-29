@@ -69,6 +69,10 @@ Components used to first prototype:
 | Tactile button           | E-Switch                     | EG4344CT-ND                             |                         |
 
 
+<img src="img/dimmer_2.jpg" style="max-width: 800px;"  />
+<img src="img/dimmer_5.jpg" style="max-width: 800px;"  />
+<img src="img/dimmer_4.jpg" style="max-width: 800px;"  />
+
 #### Case / adapter
 I 3D printed a case to hold the stacked PCBs with a standard wall mounting plate and an adapter to fit the Gira hardware for their standard dimmer component.
 
