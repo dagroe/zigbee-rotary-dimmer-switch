@@ -1907,44 +1907,6 @@
 			)
 		)
 	)
-	(sheet
-		(at 8.89 236.22)
-		(size 290.83 138.43)
-		(fields_autoplaced yes)
-		(stroke
-			(width 0.1524)
-			(type solid)
-		)
-		(fill
-			(color 0 0 0 0.0000)
-		)
-		(uuid "f573a2f6-7ec4-4fa8-a78e-a8aacd57fd2e")
-		(property "Sheetname" "Back board"
-			(at 8.89 235.5084 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left bottom)
-			)
-		)
-		(property "Sheetfile" "untitled.kicad_sch"
-			(at 8.89 375.2346 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left top)
-			)
-		)
-		(instances
-			(project "dimmer_esp_v1_power230"
-				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(page "2")
-				)
-			)
-		)
-	)
 	(sheet_instances
 		(path "/"
 			(page "1")
