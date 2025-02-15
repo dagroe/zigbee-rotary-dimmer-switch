@@ -4,10 +4,10 @@ $fs = 0.2;
 
 
 make_shaft = true;
-make_base_plate = false;
-make_spacer = false;
-make_middle_spacer = false;
-build_bottom_shell = false;
+make_base_plate = true;
+make_spacer = true;
+make_middle_spacer = true;
+build_bottom_shell = true;
 render_top_pcb = false;
 render_bottom_pcb = false;
 
@@ -141,10 +141,12 @@ if(make_spacer) {
         }
         difference() {
             // make "flap"
-            translate([0,-1,spacer_height-flap_thickness]) linear_extrude(height=flap_thickness) square([9,14], center=true);
+            translate([0,-1,spacer_height-flap_thickness]) linear_extrude(height=flap_thickness) square([8.8,13.8], center=true);
             // subtract hole for shaft
             translate([0,0,cutter_height/2-1]) cylinder(h=cutter_height, r=shaft_radius_top+0.2, center=true);
         }
+        // make pusher on flap
+        translate([0,4,spacer_height-flap_thickness-0.2]) linear_extrude(height=0.2) square([5,3], center=true);
        
         }
     }
@@ -269,7 +271,7 @@ translate([0,0,base_plate_offset_z]) difference() {
     }
     
     // hole for shaft in center
-    cylinder(h=60, r=(shaft_diameter_top+0.1)/2, center=true);
+    cylinder(h=60, r=(shaft_diameter_top+0.2)/2, center=true);
     
     // hole for disc that pushes on the button
     translate([0,0,disc_height/2-0.5]) cylinder(h=disc_height+2, r=disc_radius+0.1, center=true);
@@ -277,7 +279,7 @@ translate([0,0,base_plate_offset_z]) difference() {
 }
 
 
-space_between_shell_and_PCB = 0.1;
+space_between_shell_and_PCB = 0.3;
 
 
 if(build_bottom_shell) {
