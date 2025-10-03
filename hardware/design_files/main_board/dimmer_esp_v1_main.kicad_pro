@@ -442,6 +442,7 @@
       "single_global_label": "ignore",
       "unannotated": "error",
       "unconnected_wire_endpoint": "warning",
+      "undefined_netclass": "error",
       "unit_value_mismatch": "error",
       "unresolved_variable": "error",
       "wire_dangling": "error"
@@ -477,7 +478,7 @@
       },
       {
         "bus_width": 12,
-        "clearance": 0.5,
+        "clearance": 1.5,
         "diff_pair_gap": 0.25,
         "diff_pair_width": 0.2,
         "line_style": 0,
@@ -487,7 +488,7 @@
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 0,
         "schematic_color": "rgb(255, 183, 0)",
-        "track_width": 2.0,
+        "track_width": 0.7,
         "via_diameter": 2.0,
         "via_drill": 0.3,
         "wire_width": 6
@@ -525,7 +526,7 @@
       "plot": "/Users/groeger/Downloads/",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "../../../../../../../../Downloads/dimmer_esp_v1_3_main.step",
+      "step": "../../../../../Downloads/dimmer_esp_v2_main.stl",
       "svg": "/Users/groeger/Downloads/",
       "vrml": ""
     },
