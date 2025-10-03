@@ -9,7 +9,7 @@ make_base_plate = true;
 make_thread = false;
 make_spacer = false;
 make_middle_spacer = true;
-build_bottom_shell = false;
+build_bottom_shell = true;
 render_pcb = true;
 
 include <BOSL2/std.scad>
@@ -95,7 +95,7 @@ module my_model() {
             switch_cutout_depth = 8.94 + 0.3;
             switch_cutout_offset_x = 12.95 - switch_cutout_width/2;
             switch_cutout_offset_y = -17.2 - switch_cutout_depth/2;
-            //translate([switch_cutout_offset_x, switch_cutout_offset_y, 0]) linear_extrude(thickness+2, center=true) make_rounded_rectangle(switch_cutout_width, switch_cutout_depth, 1);
+            translate([switch_cutout_offset_x, switch_cutout_offset_y, 0]) linear_extrude(thickness+2, center=true) make_rounded_rectangle(switch_cutout_width, switch_cutout_depth, 1);
         }
     }
 
@@ -209,7 +209,7 @@ module my_model() {
     space_between_plate_and_pcb = 9.0;
     
     connector_pin_offset_x = 0.75;
-    connector_pin_offset_y = -19.95;
+    connector_pin_offset_y = -19.95+0.76;
     connector_pin_offset_z = -6.0-space_between_plate_and_pcb;
     connector_pin_radius = 1;
     connector_pin_height = 2.5;
@@ -225,14 +225,14 @@ module my_model() {
         
         // connector for screws
         color([1,0,0]) difference() {
-            translate([18.56,-11.26,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
-            translate([18.56,-10.56,connector_pin_offset_z-1]) cylinder(h=5,r=1);
+            translate([18.56,-10.52,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
+            translate([18.56,-10.52,connector_pin_offset_z-1]) cylinder(h=5,r=1);
         }
         
         
         color([1,0,0]) difference() {
             translate([-16.65,15.8,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
-            translate([-16.65,16.5,connector_pin_offset_z-1]) cylinder(h=5,r=1);
+            translate([-16.65,16.54,connector_pin_offset_z-1]) cylinder(h=5,r=1);
         }
         
         
@@ -267,8 +267,18 @@ module my_model() {
     thread_diameter = 10;
     
     height_thread_connector_including_base_plate = 4.0;
+    
+    // connectors on base plate whern shell can be fixed with crews
+    shell_connector_height = 4.6;
+    shell_connector_width = 3.0;
+    shell_connector_depth = 16.0;
+    shell_side_screw_diameter = 1.5;
+    
+    button_hole_diameter = 3.0;
 
     if(make_base_plate) {
+    
+    
 
          translate([0,0,base_plate_offset_z]) difference() {
             union() {
@@ -277,13 +287,17 @@ module my_model() {
                difference() {
                     base_plate(base_plate_thickness, base_plate_width_and_depth, base_plate_corner_radius, offset_base_plate);
                     //translate([-12,4.7,5-0.5]) cylinder(h=10, r=2, center=true);
+                    
                     // subtract cutout for buttons
-                    //translate([-11.5,14.5,5-0.5]) cylinder(h=10, r=2, center=true);
-                    //translate([-5.5,14.5,5-0.5]) cylinder(h=10, r=2, center=true);                   
-                   
+                    
+                    translate([-12.3,-1.4,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
+                    translate([-4.1,-11.0,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
+                    translate([14.3,-3.4,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
                     // hole for shaft in center
                     translate([0,0,10]) cylinder(h=60, r=(thread_diameter/2+0.5), center=true);
                 }
+                
+                
                 
                 
                 // reinforcment ring around bushing
@@ -300,22 +314,18 @@ module my_model() {
                 
                 translate([0,0,height_thread_connector_including_base_plate-0.9]) threaded_rod(d=thread_diameter, l=top_rod_height+height_thread_connector_including_base_plate, pitch=thread_pitch, left_handed=false, blunt_start2=true, blunt_start1=false, $fa=5, $fs=5);
                 
-                // reinforcment ring around encoder
+                // reinforcement ring around encoder
                 translate([0,0,-2.6]) cylinder(h=4.2, r=shaft_radius+4.0+0.1);
                 
-                // connectors on base plate whern shell can be fixed with crews
-                shell_connector_height = 4.6;
-                shell_connector_width = 3.0;
-                shell_connector_depth = 16.0;
-                
+                // connectors on base plate where shell can be fixed with screws                
                 difference() {
                     translate([20.98,0,-shell_connector_height]) linear_extrude(shell_connector_height+base_plate_thickness) square([shell_connector_width,shell_connector_depth], center=true);
-                    translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=1, h=120);
+                    translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
                 }
                 
                 difference() {
                     translate([-20.38,0,-shell_connector_height]) linear_extrude(shell_connector_height+base_plate_thickness) square([shell_connector_width,shell_connector_depth], center=true);
-                    translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=1, h=120);
+                    translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
                 }
                 
                 // inside thread
@@ -370,16 +380,35 @@ module my_model() {
     
     if (build_bottom_shell) {
     
-        translate([0,0, -bottom_shell_height-7]) difference() {
-            translate([0.3,-0.8,0]) linear_extrude(bottom_shell_height) offset(1) import(file="esp_edge_cuts_v2.svg",center=true);
-            translate([0.3,-0.8,bottom_shell_thickness]) linear_extrude(bottom_shell_height+1) offset(0.2) import(file="esp_edge_cuts_v2.svg",center=true);
+        difference() {
+            translate([0,0.76, -bottom_shell_height-7]) difference() {
+                translate([0.3,-0.8,0]) linear_extrude(bottom_shell_height) offset(1) import(file="esp_edge_cuts_v2.svg",center=true);
+                translate([0.3,-0.8,bottom_shell_thickness]) linear_extrude(bottom_shell_height+1) offset(0.2) import(file="esp_edge_cuts_v2.svg",center=true);
+            }
+            
+            // cut out for power connector
+            power_connector_hole_width = 4.0;
+            for (i=[-1:1:1]) {
+                power_connector_x = 0.7 + i * (power_connector_hole_width + 1);
+                translate([power_connector_x,-22,-24.0]) linear_extrude(6.0) square([power_connector_hole_width,10.0], center=true);
+                translate([power_connector_x,connector_pin_offset_y,-44.0]) cylinder(r=power_connector_hole_width/2, h=30.0);
         }
         
-        // cut out for power connector
-        color([1,0,0]) translate([0,0,base_plate_offset_z]) translate([-20.38,0,-base_plate_thickness-shell_connector_height/2]) linear_extrude(shell_connector_height+base_plate_thickness) square([shell_connector_width,shell_connector_depth], center=true);
+        translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
+                 
+        translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
+        
+        // hole for JST connectors
+        translate([24.0,4.8,-15.4]) linear_extrude(4.0) square([10.0,8.0], center=true);
+        translate([24.0,12.3,-15.4]) linear_extrude(4.0) square([10.0,5.0], center=true);
+        }
+        
         
     }
-
+    
+    
+        
+                
     /*
     translate([0,0, -9]) difference() {
         translate([0.3,-0.8,0]) linear_extrude(2) offset(1) import(file="esp_edge_cuts3.svg",center=true);
@@ -389,7 +418,7 @@ module my_model() {
 
 
     if(render_pcb) {
-        color([0,0,1]) translate([0.33,-0.76,-0.6]) import("../hardware/3d/dimmer_esp_v2_main.stl", convexity=3);
+        color([0,0,1]) translate([0.33,0,-0.6]) import("../hardware/3d/dimmer_esp_v2_main.stl", convexity=3);
     }
 }
 
