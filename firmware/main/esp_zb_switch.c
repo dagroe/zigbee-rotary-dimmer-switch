@@ -257,7 +257,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
                      extended_pan_id[3], extended_pan_id[2], extended_pan_id[1], extended_pan_id[0],
                      esp_zb_get_pan_id(), esp_zb_get_current_channel(), esp_zb_get_short_address());
             
-        led_state_t led_state_success = LED_COLOR_STATE_OK_GREEN;
+        led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_GREEN;
         xQueueSend(led_evt_queue, &led_state_success, 0);
         } else {
             ESP_LOGI(TAG, "Network steering was not successful (status: %s)", esp_err_to_name(err_status));
@@ -416,7 +416,9 @@ static void encoder_task(void *pvParameters) {
             }
             taskENTER_CRITICAL(&s_encoder_mux);
             encoder_rotated_flag = true;
-            taskEXIT_CRITICAL(&s_encoder_mux);            
+            taskEXIT_CRITICAL(&s_encoder_mux);
+            led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_WHITE;
+            xQueueSend(led_evt_queue, &led_state_success, 0);          
         }
 
         // check button state queue
@@ -427,42 +429,158 @@ static void encoder_task(void *pvParameters) {
     ESP_ERROR_CHECK(rotary_encoder_uninit(&encoder_info));
 }
 
+static void set_led_rgb(uint8_t r, uint8_t g, uint8_t b) {
+    ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, r, g, b));
+    ESP_ERROR_CHECK(led_strip_refresh(led_strip));
+}
+
 static void led_task(void *pvParameters) {
     ESP_LOGI(TAG, "LED task running");
 
     led_state_t current_state = LED_COLOR_STATE_OFF;
+    led_state_t requested_state = LED_COLOR_STATE_OFF;
+
+    // Blink configuration
+    const TickType_t tick_50ms = 50 / portTICK_PERIOD_MS;
+    TickType_t blink_period_ticks = 400 / portTICK_PERIOD_MS; // 400ms period
+    TickType_t blink_half_period = blink_period_ticks / 2;
+
+    // runtime blink state
+    bool blink_enabled = false;
+    bool blink_one_shot = false;
+    bool blink_on_phase = false;
+    TickType_t phase_deadline = xTaskGetTickCount(); // next phase switch time
+
+    // current solid color cache for non-blinking states
+    uint8_t solid_r = 0, solid_g = 0, solid_b = 0;
+
+    // helper to configure blink color + mode
+    static inline void configure_blink(uint8_t r, uint8_t g, uint8_t b, bool one_shot,
+                                       bool *blink_enabled_p, bool *blink_one_shot_p, bool *blink_on_phase_p,
+                                       uint8_t *solid_r_p, uint8_t *solid_g_p, uint8_t *solid_b_p,
+                                       TickType_t *phase_deadline_p, TickType_t half_period) {
+        *blink_enabled_p = true;
+        *blink_one_shot_p = one_shot;
+        *blink_on_phase_p = true; // start with ON
+        *solid_r_p = r; *solid_g_p = g; *solid_b_p = b;
+        set_led_rgb(*solid_r_p, *solid_g_p, *solid_b_p);
+        *phase_deadline_p = xTaskGetTickCount() + half_period;
+    }
+
+    // Set solid color (disables blink)
+    static inline void set_solid_color(uint8_t r, uint8_t g, uint8_t b,
+                                       bool *blink_enabled_p, bool *blink_one_shot_p) {
+        *blink_enabled_p = false;
+        *blink_one_shot_p = false;
+        set_led_rgb(r, g, b);
+    }
+
+    // Initialize OFF
+    set_solid(0, 0, 0);
+    current_state = LED_COLOR_STATE_OFF;
 
     while (1)
     {
+        // Process new requests (non-blocking wait to allow blink timing)
+        if (xQueueReceive(led_evt_queue, &requested_state, tick_50ms) == pdTRUE) {
+        
         // Wait for incoming events on the event queue.
         led_state_t new_state = LED_COLOR_STATE_OFF;
         if (xQueueReceive(led_evt_queue, &new_state, 1000 / portTICK_PERIOD_MS) == pdTRUE && new_state != current_state)
         {
-            ESP_LOGI(TAG, "LED event: code %u", new_state);
-            switch (new_state)
-            {
-            case LED_COLOR_STATE_WARN_RED:
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 50, 0, 0));
-                break;
-            case LED_COLOR_STATE_OK_GREEN:
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 0, 50, 0));
-                break;
-            case LED_COLOR_STATE_FEEDBACK_WHITE_ONE_PULSE:
-                ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 50, 50, 50));
-                break;
-            case LED_COLOR_STATE_WATITNG_YELLOW_BLINK:
-                // TODO: implement blink and blink once
-                break;
-            
-            default:
-                break;
-            }
+            if (requested_state != current_state) {
+                ESP_LOGI(TAG, "LED event: code %u", requested_state);
+                current_state = requested_state;
 
-            ESP_ERROR_CHECK(led_strip_refresh(led_strip));
-          
+                switch (requested_state) {
+                    case LED_COLOR_STATE_OFF:
+                        set_solid(0, 0, 0);
+                        break;
+
+                    case LED_COLOR_STATE_WARN_RED:
+                        set_solid(5, 0, 0);
+                        break;
+
+                    case LED_COLOR_STATE_OK_GREEN:
+                        set_solid(0, 5, 0);
+                        break;
+
+                    case LED_COLOR_STATE_FEEDBACK_WHITE_ONE_PULSE:
+                        // Interpret as one-shot white blink
+                        configure_blink(5, 5, 5, true);
+                        break;
+
+                    case LED_COLOR_STATE_WATITNG_YELLOW_BLINK:
+                        // Interpret as continuous yellow blink
+                        configure_blink(5, 5, 0, false);
+                        break;
+
+                    // New: continuous blink colors
+                    case LED_COLOR_STATE_BLINK_RED:
+                        configure_blink(5, 0, 0, false);
+                        break;
+                    case LED_COLOR_STATE_BLINK_GREEN:
+                        configure_blink(0, 5, 0, false);
+                        break;
+                    case LED_COLOR_STATE_BLINK_BLUE:
+                        configure_blink(0, 0, 5, false);
+                        break;
+                    case LED_COLOR_STATE_BLINK_YELLOW:
+                        configure_blink(5, 5, 0, false);
+                        break;
+                    case LED_COLOR_STATE_BLINK_WHITE:
+                        configure_blink(5, 5, 5, false);
+                        break;
+
+                    // New: one-shot blink colors
+                    case LED_COLOR_STATE_BLINK_ONCE_RED:
+                        configure_blink(5, 0, 0, true);
+                        break;
+                    case LED_COLOR_STATE_BLINK_ONCE_GREEN:
+                        configure_blink(0, 5, 0, true);
+                        break;
+                    case LED_COLOR_STATE_BLINK_ONCE_BLUE:
+                        configure_blink(0, 0, 5, true);
+                        break;
+                    case LED_COLOR_STATE_BLINK_ONCE_YELLOW:
+                        configure_blink(5, 5, 0, true);
+                        break;
+                    case LED_COLOR_STATE_BLINK_ONCE_WHITE:
+                        configure_blink(5, 5, 5, true);
+                        break;
+
+                    default:
+                        // Unknown code: do nothing
+                        break;
+                }
+            }
+        }
+
+        // Handle blinking timing
+        if (blink_enabled) {
+            TickType_t now = xTaskGetTickCount();
+            if (now >= phase_deadline) {
+                // Toggle phase
+                blink_on_phase = !blink_on_phase;
+                if (blink_on_phase) {
+                    set_led_rgb(solid_r, solid_g, solid_b);
+                } else {
+                    set_led_rgb(0, 0, 0);
+                }
+
+                // End one-shot after OFF phase completes
+                if (blink_one_shot && !blink_on_phase) {
+                    blink_enabled = false;
+                    blink_one_shot = false;
+                    // settle to OFF after one-shot
+                    current_state = LED_COLOR_STATE_OFF;
+                }
+
+                // schedule next phase switch
+                phase_deadline = now + blink_half_period;
+            }
         }
     }
-    ESP_LOGE(TAG, "LED queue receive failed");
 }
 
 void app_main(void) {

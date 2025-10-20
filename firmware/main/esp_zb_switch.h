@@ -32,6 +32,20 @@ typedef enum
     LED_COLOR_STATE_OK_GREEN,
     LED_COLOR_STATE_FEEDBACK_WHITE_ONE_PULSE,
     LED_COLOR_STATE_WATITNG_YELLOW_BLINK,
+
+    // New: continuous blink colors
+    LED_COLOR_STATE_BLINK_RED,
+    LED_COLOR_STATE_BLINK_GREEN,
+    LED_COLOR_STATE_BLINK_BLUE,
+    LED_COLOR_STATE_BLINK_YELLOW,
+    LED_COLOR_STATE_BLINK_WHITE,
+
+    // New: one-shot blink colors
+    LED_COLOR_STATE_BLINK_ONCE_RED,
+    LED_COLOR_STATE_BLINK_ONCE_GREEN,
+    LED_COLOR_STATE_BLINK_ONCE_BLUE,
+    LED_COLOR_STATE_BLINK_ONCE_YELLOW,
+    LED_COLOR_STATE_BLINK_ONCE_WHITE,
 } led_state_t;
 
 #define ENABLE_HALF_STEPS false  // Set to true to enable tracking of rotary encoder at half step resolution
