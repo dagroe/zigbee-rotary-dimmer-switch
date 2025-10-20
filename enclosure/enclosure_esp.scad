@@ -4,7 +4,7 @@ $fn=64;
 
 
 
-make_shaft = false;
+make_shaft = true;
 make_base_plate = true;
 make_thread = false;
 make_spacer = false;
@@ -206,7 +206,7 @@ module my_model() {
     }
 
     // Make caps to cover 230V pins on front side
-    space_between_plate_and_pcb = 9.0;
+    space_between_plate_and_pcb = 11.0;
     
     connector_pin_offset_x = 0.75;
     connector_pin_offset_y = -19.95+0.76;
@@ -215,6 +215,9 @@ module my_model() {
     connector_pin_height = 2.5;
 
     if(make_middle_spacer) {
+    
+        // cover for 230V connector pin ends
+        /*
         for (i=[-1:1:1]) {
             center_x = connector_pin_offset_x+2.54*2*i;
             color([1,1,0]) difference() {
@@ -222,6 +225,7 @@ module my_model() {
                 translate([center_x,connector_pin_offset_y,connector_pin_offset_z-1]) cylinder(h=connector_pin_height+1,r=connector_pin_radius);
             }
         }
+        */
         
         // connector for screws
         color([1,0,0]) difference() {
@@ -231,7 +235,7 @@ module my_model() {
         
         
         color([1,0,0]) difference() {
-            translate([-16.65,15.8,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
+            translate([-16.65,16.54,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
             translate([-16.65,16.54,connector_pin_offset_z-1]) cylinder(h=5,r=1);
         }
         
@@ -375,12 +379,12 @@ module my_model() {
     }
     
     
-    bottom_shell_height = 26.5;
+    bottom_shell_height = 29;
     bottom_shell_thickness = 1;
     
     if (build_bottom_shell) {
     
-        difference() {
+        translate([0,0,0]) difference() {
             translate([0,0.76, -bottom_shell_height-7]) difference() {
                 translate([0.3,-0.8,0]) linear_extrude(bottom_shell_height) offset(1) import(file="esp_edge_cuts_v2.svg",center=true);
                 translate([0.3,-0.8,bottom_shell_thickness]) linear_extrude(bottom_shell_height+1) offset(0.2) import(file="esp_edge_cuts_v2.svg",center=true);
@@ -390,17 +394,17 @@ module my_model() {
             power_connector_hole_width = 4.0;
             for (i=[-1:1:1]) {
                 power_connector_x = 0.7 + i * (power_connector_hole_width + 1);
-                translate([power_connector_x,-22,-24.0]) linear_extrude(6.0) square([power_connector_hole_width,10.0], center=true);
-                translate([power_connector_x,connector_pin_offset_y,-44.0]) cylinder(r=power_connector_hole_width/2, h=30.0);
+                translate([power_connector_x,-22,-26.0]) linear_extrude(6.0) square([power_connector_hole_width,10.0], center=true);
+                translate([power_connector_x,connector_pin_offset_y,-48.0]) cylinder(r=power_connector_hole_width/2, h=30.0);
         }
         
-        translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
+        translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
                  
-        translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
+        translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
         
         // hole for JST connectors
-        translate([24.0,4.8,-15.4]) linear_extrude(4.0) square([10.0,8.0], center=true);
-        translate([24.0,12.3,-15.4]) linear_extrude(4.0) square([10.0,5.0], center=true);
+        translate([24.0,4.8,-17.4]) linear_extrude(4.0) square([10.0,8.0], center=true);
+        translate([24.0,12.3,-17.4]) linear_extrude(4.0) square([10.0,5.0], center=true);
         }
         
         
@@ -418,12 +422,12 @@ module my_model() {
 
 
     if(render_pcb) {
-        color([0,0,1]) translate([0.33,0,-0.6]) import("../hardware/3d/dimmer_esp_v2_main.stl", convexity=3);
+        color([0,0,1]) translate([0.33,0,-2.6]) import("../hardware/3d/dimmer_esp_v2_main.stl", convexity=3);
     }
 }
 
 //intersection() {
 my_model();
-//translate([0,0,-90]) cylinder(h=680, r=28);
+//translate([0,0,-90]) cylinder(h=680, r=7);
 //translate([-20,0,-90]) linear_extrude(180) square([40,80], center=true);
 //}
