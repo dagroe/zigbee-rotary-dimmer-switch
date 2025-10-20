@@ -69,41 +69,64 @@ static switch_func_pair_t button_func_pair[] = {
 static QueueHandle_t encoder_btn_evt_queue = NULL;
 static QueueHandle_t led_evt_queue = NULL;
 
+// create a flag to signal when the encoder was rotated after button downm (to prevent button up)
+static portMUX_TYPE s_encoder_mux = portMUX_INITIALIZER_UNLOCKED;
+static volatile bool encoder_rotated_flag = false;
+
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
 
 static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_state_t state)
 {
     if (button_func_pair->func == SWITCH_ONOFF_TOGGLE_CONTROL) {
         ESP_LOGI(TAG, "esp_zb_buttons_handler");
+
+        bool encoder_rotated_flag_was_set;
+        taskENTER_CRITICAL(&s_encoder_mux);
+        encoder_rotated_flag_was_set = encoder_rotated_flag;
+        taskEXIT_CRITICAL(&s_encoder_mux);
+
         bool button_state = false;
         switch(state) {
             case SWITCH_RELEASE_DETECTED:
-                // send toggle command
-                esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
-                toggle_cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
-                toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
-                ESP_EARLY_LOGI(TAG, "Send 'on_off toggle' command");
-                ESP_EARLY_LOGI(TAG, "Send button up");
-                esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req);
+                if (encoder_rotated_flag_was_set != true) {
+                    // send toggle command
+                    esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
+                    toggle_cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
+                    toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+                    toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
+                    ESP_EARLY_LOGI(TAG, "Send 'on_off toggle' command");
+                    ESP_EARLY_LOGI(TAG, "Send button up");
+                    esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req);
+                }
                 // set encoder button state to UP
                 button_state = false;
                 xQueueSend(encoder_btn_evt_queue, &button_state, 0);
                 break;
             case SWITCH_PRESS_DETECTED:
+                // reset flag
+                taskENTER_CRITICAL(&s_encoder_mux);
+                encoder_rotated_flag = false;
+                taskEXIT_CRITICAL(&s_encoder_mux);
+
                 // set encoder button state to DOWN
                 ESP_EARLY_LOGI(TAG, "Send button down");
                 button_state = true;
                 xQueueSend(encoder_btn_evt_queue, &button_state, 0);
                 break;
             case SWITCH_LONG_RELEASE_DETECTED:
-                // send off command
-                esp_zb_zcl_on_off_cmd_t off_cmd_req;
-                off_cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
-                off_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                off_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_OFF_ID;
-                ESP_EARLY_LOGI(TAG, "Send 'on_off off' command");
-                esp_zb_zcl_on_off_cmd_req(&off_cmd_req);
+                if (encoder_rotated_flag_was_set != true) {
+                    // send off command
+                    esp_zb_zcl_on_off_cmd_t off_cmd_req;
+                    off_cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
+                    off_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+                    off_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_OFF_ID;
+                    ESP_EARLY_LOGI(TAG, "Send 'on_off off' command");
+                    esp_zb_zcl_on_off_cmd_req(&off_cmd_req);
+                }
+                // set encoder button state to UP
+                button_state = false;
+                xQueueSend(encoder_btn_evt_queue, &button_state, 0);
+                break;
                 break;
             case SWITCH_HOLD_RELEASE_DETECTED:
                 // set encoder button state to UP
@@ -257,9 +280,9 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
     }
 }
 
-char modelid[] = { 4, 'R','T','0','2' };
+char modelid[] = { 12, 'E','S','P','_','D','I','M','M','E','R','_','1' };
 char manufname[] = { 14, 'D','G',' ','E','l','e','c','t','r','o','n','i','c','s' };
-char sw_build_version[] = { 9, '2','0','2','4','0','6','2','8','1' };
+char sw_build_version[] = { 9, '2','0','2','5','1','0','1','9','1' };
 
 static void esp_zb_task(void *pvParameters)
 {
@@ -390,7 +413,10 @@ static void encoder_task(void *pvParameters) {
                 cmd_req.transition_time = 1;
                 ESP_EARLY_LOGI(TAG, "Send 'level step' command");
                 esp_zb_zcl_level_step_cmd_req(&cmd_req);
-            }            
+            }
+            taskENTER_CRITICAL(&s_encoder_mux);
+            encoder_rotated_flag = true;
+            taskEXIT_CRITICAL(&s_encoder_mux);            
         }
 
         // check button state queue
@@ -456,6 +482,7 @@ void app_main(void) {
         ESP_LOGE(TAG, "Queue for encoder button was not created");
         return;
     }
+
     // create queue to pass LED state events
     led_evt_queue = xQueueCreate(5, sizeof(led_state_t));
     if ( led_evt_queue == 0) {
