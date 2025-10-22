@@ -7,7 +7,7 @@ $fn=64;
 make_shaft = true;
 make_base_plate = true;
 make_thread = false;
-make_spacer = false;
+make_spacer = true;
 make_middle_spacer = true;
 build_bottom_shell = true;
 render_pcb = true;
@@ -89,13 +89,6 @@ module my_model() {
                 rotate([0, 0, center]) translate([width_and_depth*0.5 - cutout_depth_x, -(cutout_offset_y*0.5+cutout_width_y*0.5), 0]) translate([0, -cutout_width_y*0.5, 0]) linear_extrude(20, center=true) square([cutout_depth_x, cutout_width_y]);
 
             }
-
-            // cutout rectangle for USB
-            switch_cutout_width = 3.16 + 0.3;
-            switch_cutout_depth = 8.94 + 0.3;
-            switch_cutout_offset_x = 12.95 - switch_cutout_width/2;
-            switch_cutout_offset_y = -17.2 - switch_cutout_depth/2;
-            translate([switch_cutout_offset_x, switch_cutout_offset_y, 0]) linear_extrude(thickness+2, center=true) make_rounded_rectangle(switch_cutout_width, switch_cutout_depth, 1);
         }
     }
 
@@ -191,6 +184,8 @@ module my_model() {
             
     }
 
+    pcb_outline_svg_offset_x = 0.3;
+    pcb_outline_svg_offset_y = -0.8;
 
     side_thickness = 0.8;
         
@@ -202,43 +197,6 @@ module my_model() {
 
     if (make_shaft) {
         color([1,0,0]) translate([0,0,-1.5]) SocketAdapter(side_thickness, shaft_radius, offset_z);
-        
-    }
-
-    // Make caps to cover 230V pins on front side
-    space_between_plate_and_pcb = 11.0;
-    
-    connector_pin_offset_x = 0.75;
-    connector_pin_offset_y = -19.95+0.76;
-    connector_pin_offset_z = -6.0-space_between_plate_and_pcb;
-    connector_pin_radius = 1;
-    connector_pin_height = 2.5;
-
-    if(make_middle_spacer) {
-    
-        // cover for 230V connector pin ends
-        /*
-        for (i=[-1:1:1]) {
-            center_x = connector_pin_offset_x+2.54*2*i;
-            color([1,1,0]) difference() {
-                translate([center_x,connector_pin_offset_y,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=connector_pin_radius+1);
-                translate([center_x,connector_pin_offset_y,connector_pin_offset_z-1]) cylinder(h=connector_pin_height+1,r=connector_pin_radius);
-            }
-        }
-        */
-        
-        // connector for screws
-        color([1,0,0]) difference() {
-            translate([18.56,-10.52,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
-            translate([18.56,-10.52,connector_pin_offset_z-1]) cylinder(h=5,r=1);
-        }
-        
-        
-        color([1,0,0]) difference() {
-            translate([-16.65,16.54,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
-            translate([-16.65,16.54,connector_pin_offset_z-1]) cylinder(h=5,r=1);
-        }
-        
         
     }
 
@@ -279,6 +237,14 @@ module my_model() {
     shell_side_screw_diameter = 1.5;
     
     button_hole_diameter = 3.0;
+    
+     // cutout rectangle for USB, needs to be recessed a bit since USB is not tall enough
+    switch_cutout_width = 3.16 + 0.3;
+    switch_cutout_depth = 8.94 + 0.3;
+    switch_cutout_offset_x = 12.95 - switch_cutout_width/2;
+    switch_cutout_offset_y = -17.2 - switch_cutout_depth/2;
+    usb_cutout_recess_padding = 2.0;
+    usb_cutout_recess_depth = 3.0;
 
     if(make_base_plate) {
     
@@ -333,19 +299,85 @@ module my_model() {
                 }
                 
                 // inside thread
-                //translate([0,0,-0.4]) threaded_nut(nutwidth=16, id=thread_diameter, h=height_thread_connector_including_base_plate, pitch=thread_pitch, shape="square", bevel=false, blunt_start=false, $slop=0.05, $fa=1, $fs=1);                                
+                //translate([0,0,-0.4]) threaded_nut(nutwidth=16, id=thread_diameter, h=height_thread_connector_including_base_plate, pitch=thread_pitch, shape="square", bevel=false, blunt_start=false, $slop=0.05, $fa=1, $fs=1);   
+
+
+                // Make caps to cover 230V pins on front side
+                space_between_plate_and_pcb = 11.0;
+                
+                connector_pin_offset_x = 0.75;
+                connector_pin_offset_y = -19.95+0.76;
+                connector_pin_offset_z = -space_between_plate_and_pcb+1;
+                connector_pin_radius = 1;
+                connector_pin_height = 2.5;
+
+                if(make_middle_spacer) {
+                
+                    // cover for 230V connector pin ends
+                    /*
+                    for (i=[-1:1:1]) {
+                        center_x = connector_pin_offset_x+2.54*2*i;
+                        color([1,1,0]) difference() {
+                            translate([center_x,connector_pin_offset_y,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=connector_pin_radius+1);
+                            translate([center_x,connector_pin_offset_y,connector_pin_offset_z-1]) cylinder(h=connector_pin_height+1,r=connector_pin_radius);
+                        }
+                    }
+                    */
+                    
+                    // connector for screws                    
+                    color([1,0,0]) difference() {
+                        union() {                        
+                            // make bulky base so that screws don't break the sockets, then narrow cylinders only where it touches the board
+                            // need to cut bulky part with board outline, since it extends past that
+                            intersection() {
+                                translate([pcb_outline_svg_offset_x,pcb_outline_svg_offset_y,-20]) linear_extrude(bottom_shell_height) import(file="esp_edge_cuts_v2.svg",center=true);
+                            
+                                space_between_bukly_part_and_board_1 = 1.0; // height of tallest component in the way
+                                color([1,0,1]) translate([18.56,-10.52,connector_pin_offset_z+space_between_bukly_part_and_board_1]) cylinder(h=space_between_plate_and_pcb-space_between_bukly_part_and_board_1,r=5);
+                            }
+                            translate([18.56,-10.52,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
+                        }
+                        translate([18.56,-10.52,connector_pin_offset_z-1]) cylinder(h=10,r=1);
+                    }
+                    
+                    
+                    color([1,0,0]) difference() {
+                        union() {
+                            intersection() {
+                                translate([pcb_outline_svg_offset_x,pcb_outline_svg_offset_y,-20]) linear_extrude(bottom_shell_height) import(file="esp_edge_cuts_v2.svg",center=true);
+                            space_between_bukly_part_and_board_2 = 2.0; // height of tallest component in the way
+                                translate([-16.65,16.54,connector_pin_offset_z+space_between_bukly_part_and_board_2]) cylinder(h=space_between_plate_and_pcb-space_between_bukly_part_and_board_2,r=5);
+                            }
+                            translate([-16.65,16.54,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
+                        }
+                        translate([-16.65,16.54,connector_pin_offset_z-1]) cylinder(h=10,r=1);
+                    }
+                    
+                    
+                }
+                
+                // USB cutout            
+                // make thicker for USB                              
+                translate([switch_cutout_offset_x-usb_cutout_recess_padding-1.0, switch_cutout_offset_y-usb_cutout_recess_padding-1.0, -base_plate_thickness]) linear_extrude(base_plate_thickness+2, center=true) make_rounded_rectangle(switch_cutout_width+usb_cutout_recess_padding*2+2, switch_cutout_depth+usb_cutout_recess_padding*2+2, 1);
+                
             }  
   
 
             // hole for shaft in center
-            translate([0,0,10]) cylinder(h=60, r=(shaft_radius-0.5+0.2), center=true);
+            translate([0,0,10]) cylinder(h=60, r=(shaft_radius-0.5+0.3), center=true);
             
             // hole for knob wrapper
-            translate([0,0,-3.4]) cylinder(h=11, r=shaft_radius+0.4);
+            translate([0,0,-3.4]) cylinder(h=11, r=shaft_radius+0.5);
             
             
             // hole for encoder body
-            translate([0,0,-3.4]) cylinder(h=5, r=shaft_radius+0.6);  
+            translate([0,0,-3.4]) cylinder(h=5, r=shaft_radius+0.7); 
+           
+          
+            // recess for USB
+            translate([switch_cutout_offset_x-usb_cutout_recess_padding, switch_cutout_offset_y-usb_cutout_recess_padding, base_plate_thickness+2-usb_cutout_recess_depth]) linear_extrude(base_plate_thickness+2, center=true) make_rounded_rectangle(switch_cutout_width+usb_cutout_recess_padding*2, switch_cutout_depth+usb_cutout_recess_padding*2, 2);
+            // hole for USB
+            translate([switch_cutout_offset_x, switch_cutout_offset_y, 0]) linear_extrude(base_plate_thickness+40, center=true) make_rounded_rectangle(switch_cutout_width, switch_cutout_depth, 1); 
         }
     }
     
@@ -378,7 +410,6 @@ module my_model() {
     
     }
     
-    
     bottom_shell_height = 29;
     bottom_shell_thickness = 1;
     
@@ -386,8 +417,8 @@ module my_model() {
     
         translate([0,0,0]) difference() {
             translate([0,0.76, -bottom_shell_height-7]) difference() {
-                translate([0.3,-0.8,0]) linear_extrude(bottom_shell_height) offset(1) import(file="esp_edge_cuts_v2.svg",center=true);
-                translate([0.3,-0.8,bottom_shell_thickness]) linear_extrude(bottom_shell_height+1) offset(0.2) import(file="esp_edge_cuts_v2.svg",center=true);
+                translate([pcb_outline_svg_offset_x,pcb_outline_svg_offset_y,0]) linear_extrude(bottom_shell_height) offset(1) import(file="esp_edge_cuts_v2.svg",center=true);
+                translate([pcb_outline_svg_offset_x,pcb_outline_svg_offset_y,bottom_shell_thickness]) linear_extrude(bottom_shell_height+1) offset(0.2) import(file="esp_edge_cuts_v2.svg",center=true);
             }
             
             // cut out for power connector
@@ -396,17 +427,21 @@ module my_model() {
                 power_connector_x = 0.7 + i * (power_connector_hole_width + 1);
                 translate([power_connector_x,-22,-26.0]) linear_extrude(6.0) square([power_connector_hole_width,10.0], center=true);
                 translate([power_connector_x,connector_pin_offset_y,-48.0]) cylinder(r=power_connector_hole_width/2, h=30.0);
+            }
+        
+            translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
+                     
+            translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
+            
+            // hole for JST connectors
+            translate([24.0,4.8,-17.4]) linear_extrude(4.0) square([10.0,8.0], center=true);
+            translate([24.0,12.3,-17.4]) linear_extrude(4.0) square([10.0,5.0], center=true);
+            
+            // hole at top for USB connector (needs space outside shell)
+            translate([switch_cutout_offset_x-usb_cutout_recess_padding-1.05, switch_cutout_offset_y-usb_cutout_recess_padding-1.05, base_plate_offset_z-base_plate_thickness]) linear_extrude(base_plate_thickness+2.05, center=true) make_rounded_rectangle(switch_cutout_width+usb_cutout_recess_padding*2+2.1, switch_cutout_depth+usb_cutout_recess_padding*2+2.1, 1);
+        
+            
         }
-        
-        translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
-                 
-        translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
-        
-        // hole for JST connectors
-        translate([24.0,4.8,-17.4]) linear_extrude(4.0) square([10.0,8.0], center=true);
-        translate([24.0,12.3,-17.4]) linear_extrude(4.0) square([10.0,5.0], center=true);
-        }
-        
         
     }
     
