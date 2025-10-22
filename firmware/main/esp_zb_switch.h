@@ -48,7 +48,7 @@ typedef enum
     LED_COLOR_STATE_BLINK_ONCE_WHITE,
 } led_state_t;
 
-#define ENABLE_HALF_STEPS false  // Set to true to enable tracking of rotary encoder at half step resolution
+#define ENABLE_HALF_STEPS true  // Set to true to enable tracking of rotary encoder at half step resolution
 #define RESET_AT          0      // Set to a positive non-zero number to reset the position if this value is exceeded
 #define FLIP_DIRECTION    false  // Set to true to reverse the clockwise/counterclockwise sense
 
