@@ -4,13 +4,13 @@ $fn=64;
 
 
 
-make_shaft = true;
-make_base_plate = true;
+make_shaft = false;
+make_base_plate = false;
 make_thread = false;
-make_spacer = true;
-make_middle_spacer = true;
+make_spacer = false;
+make_middle_spacer = false;
 build_bottom_shell = true;
-render_pcb = true;
+render_pcb = false;
 
 include <BOSL2/std.scad>
 include <BOSL2/threading.scad>
@@ -245,6 +245,13 @@ module my_model() {
     switch_cutout_offset_y = -17.2 - switch_cutout_depth/2;
     usb_cutout_recess_padding = 2.0;
     usb_cutout_recess_depth = 3.0;
+    
+     // Caps to cover 230V pins on front side    
+    connector_pin_offset_x = 0.75;
+    connector_pin_offset_y = -19.95+0.76;
+    connector_pin_offset_z = -space_between_plate_and_pcb+1;
+    connector_pin_radius = 1;
+    connector_pin_height = 2.5;
 
     if(make_base_plate) {
     
@@ -305,12 +312,6 @@ module my_model() {
                 // Make caps to cover 230V pins on front side
                 space_between_plate_and_pcb = 11.0;
                 
-                connector_pin_offset_x = 0.75;
-                connector_pin_offset_y = -19.95+0.76;
-                connector_pin_offset_z = -space_between_plate_and_pcb+1;
-                connector_pin_radius = 1;
-                connector_pin_height = 2.5;
-
                 if(make_middle_spacer) {
                 
                     // cover for 230V connector pin ends
@@ -426,7 +427,7 @@ module my_model() {
             for (i=[-1:1:1]) {
                 power_connector_x = 0.7 + i * (power_connector_hole_width + 1);
                 translate([power_connector_x,-22,-26.0]) linear_extrude(6.0) square([power_connector_hole_width,10.0], center=true);
-                translate([power_connector_x,connector_pin_offset_y,-48.0]) cylinder(r=power_connector_hole_width/2, h=30.0);
+                translate([power_connector_x,connector_pin_offset_y,-90.0]) cylinder(r=power_connector_hole_width/2, h=100.0);
             }
         
             translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
