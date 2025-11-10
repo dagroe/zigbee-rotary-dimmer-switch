@@ -20,33 +20,7 @@
 #define ROT_ENC_A_GPIO GPIO_NUM_21
 #define ROT_ENC_B_GPIO GPIO_NUM_22
 
-#define LED_GPIO GPIO_NUM_1
 
-/**
- * @brief Enum representing color states.
- */
-typedef enum
-{
-    LED_COLOR_STATE_OFF = 0,
-    LED_COLOR_STATE_WARN_RED,
-    LED_COLOR_STATE_OK_GREEN,
-    LED_COLOR_STATE_FEEDBACK_WHITE_ONE_PULSE,
-    LED_COLOR_STATE_WATITNG_YELLOW_BLINK,
-
-    // New: continuous blink colors
-    LED_COLOR_STATE_BLINK_RED,
-    LED_COLOR_STATE_BLINK_GREEN,
-    LED_COLOR_STATE_BLINK_BLUE,
-    LED_COLOR_STATE_BLINK_YELLOW,
-    LED_COLOR_STATE_BLINK_WHITE,
-
-    // New: one-shot blink colors
-    LED_COLOR_STATE_BLINK_ONCE_RED,
-    LED_COLOR_STATE_BLINK_ONCE_GREEN,
-    LED_COLOR_STATE_BLINK_ONCE_BLUE,
-    LED_COLOR_STATE_BLINK_ONCE_YELLOW,
-    LED_COLOR_STATE_BLINK_ONCE_WHITE,
-} led_state_t;
 
 #define ENABLE_HALF_STEPS true  // Set to true to enable tracking of rotary encoder at half step resolution
 #define RESET_AT          0      // Set to a positive non-zero number to reset the position if this value is exceeded
