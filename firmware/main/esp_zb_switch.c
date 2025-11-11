@@ -34,12 +34,15 @@ static switch_func_pair_t button_func_pair[] = {
     {GPIO_INPUT_IO_TOGGLE_SWITCH, SWITCH_ONOFF_TOGGLE_CONTROL},
 };
 
-static QueueHandle_t encoder_btn_evt_queue = NULL;
 static QueueHandle_t led_evt_queue = NULL;
 
 // create a flag to signal when the encoder was rotated after button downm (to prevent button up)
 static portMUX_TYPE s_encoder_mux = portMUX_INITIALIZER_UNLOCKED;
 static volatile bool encoder_rotated_flag = false;
+
+// create a flag to signal whether the button is UP or DOWN to decie if we send BIRGHTNESS or HUE command on rotation
+static portMUX_TYPE s_button_mux = portMUX_INITIALIZER_UNLOCKED;
+static volatile bool encoder_button_down = false;
 
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
 
@@ -68,7 +71,6 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 }
                 // set encoder button state to UP
                 button_state = false;
-                xQueueSend(encoder_btn_evt_queue, &button_state, 0);
                 break;
             case SWITCH_PRESS_DETECTED:
                 // reset flag
@@ -79,7 +81,6 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 // set encoder button state to DOWN
                 ESP_EARLY_LOGI(TAG, "Send button down");
                 button_state = true;
-                xQueueSend(encoder_btn_evt_queue, &button_state, 0);
                 break;
             case SWITCH_LONG_RELEASE_DETECTED:
                 if (encoder_rotated_flag_was_set != true) {
@@ -93,18 +94,23 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 }
                 // set encoder button state to UP
                 button_state = false;
-                xQueueSend(encoder_btn_evt_queue, &button_state, 0);
                 break;
                 break;
             case SWITCH_HOLD_RELEASE_DETECTED:
                 // set encoder button state to UP
                 ESP_EARLY_LOGI(TAG, "Send button up");
                 button_state = false;
-                xQueueSend(encoder_btn_evt_queue, &button_state, 0);
                 break;
             default:
                 break;
         }
+
+
+        // Do not write button state for now, do not support push and rotate
+        // We have problem to distinguish between push and rotate and push. When just pushing but the encoder fires, button up will be ignored
+        //taskENTER_CRITICAL(&s_button_mux);
+        //encoder_button_down = button_state;
+        //taskEXIT_CRITICAL(&s_button_mux);
         /* implemented light switch toggle functionality */
         
         // esp_zb_zcl_level_step_cmd_t cmd_req;
@@ -357,7 +363,11 @@ static void encoder_task(void *pvParameters) {
         }
 
         // check button state queue
-        xQueueReceive(encoder_btn_evt_queue, &button_state, 10 / portTICK_PERIOD_MS);
+
+        bool encoder_rotated_flag_was_set;
+        taskENTER_CRITICAL(&s_button_mux);
+        button_state = encoder_button_down;
+        taskEXIT_CRITICAL(&s_button_mux);
     }
     ESP_LOGE(TAG, "queue receive failed");
 
@@ -371,14 +381,6 @@ void app_main(void) {
     };
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_zb_platform_config(&config));
-
-
-    // create queue to pass encoder button state to encoder_task
-    encoder_btn_evt_queue = xQueueCreate(5, sizeof(bool));
-    if ( encoder_btn_evt_queue == 0) {
-        ESP_LOGE(TAG, "Queue for encoder button was not created");
-        return;
-    }
 
     // create queue to pass LED state events
     led_evt_queue = xQueueCreate(5, sizeof(led_state_t));
