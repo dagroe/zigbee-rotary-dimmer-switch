@@ -11,18 +11,18 @@ static const char *TAG = "ESP_LED_TASK";
 led_strip_config_t strip_config = {
     .strip_gpio_num = LED_GPIO,  // The GPIO that connected to the LED strip's data line
     .max_leds = 1,                 // The number of LEDs in the strip,
-    // .led_model = LED_MODEL_WS2812, // LED strip model, it determines the bit timing
-    // .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB, // The color component format is G-R-B
-    // .flags = {
-    //     .invert_out = false, // don't invert the output signal
-    // }
+    .led_model = LED_MODEL_WS2812, // LED strip model, it determines the bit timing
+    .color_component_format = LED_STRIP_COLOR_COMPONENT_FMT_GRB, // The color component format is G-R-B
+    .flags = {
+        .invert_out = false, // don't invert the output signal
+    }
 };
 
 /// RMT backend specific configuration
 led_strip_rmt_config_t rmt_config = {
-    // .clk_src = RMT_CLK_SRC_DEFAULT,    // different clock source can lead to different power consumption
+    .clk_src = RMT_CLK_SRC_DEFAULT,    // different clock source can lead to different power consumption
     .resolution_hz = 10 * 1000 * 1000, // RMT counter clock frequency: 10MHz
-    // .mem_block_symbols = 64,           // the memory size of each RMT channel, in words (4 bytes)
+    .mem_block_symbols = 64,           // the memory size of each RMT channel, in words (4 bytes)
     .flags = {
         .with_dma = false, // DMA feature is available on chips like ESP32-S3/P4
     }
@@ -75,6 +75,8 @@ static void led_task(void *pvParameters) {
     led_set_solid_color(0, 0, 0, &blink_enabled, &blink_one_shot);
     current_state = LED_COLOR_STATE_OFF;
 
+    uint8_t led_brightness = 5;
+
     while (1) {
         if (xQueueReceive(led_evt_queue, &requested_state, tick_50ms) == pdTRUE) {
             if (requested_state != current_state) {
@@ -86,20 +88,20 @@ static void led_task(void *pvParameters) {
                         led_set_solid_color(0, 0, 0, &blink_enabled, &blink_one_shot);
                         break;
                     case LED_COLOR_STATE_WARN_RED:
-                        led_set_solid_color(5, 0, 0, &blink_enabled, &blink_one_shot);
+                        led_set_solid_color(led_brightness, 0, 0, &blink_enabled, &blink_one_shot);
                         break;
                     case LED_COLOR_STATE_OK_GREEN:
-                        led_set_solid_color(0, 5, 0, &blink_enabled, &blink_one_shot);
+                        led_set_solid_color(0, led_brightness, 0, &blink_enabled, &blink_one_shot);
                         break;
 
                     case LED_COLOR_STATE_FEEDBACK_WHITE_ONE_PULSE:
-                        led_configure_blink(5, 5, 5, true,
+                        led_configure_blink(led_brightness, led_brightness, led_brightness, true,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_WATITNG_YELLOW_BLINK:
-                        led_configure_blink(5, 5, 0, false,
+                        led_configure_blink(led_brightness, led_brightness, 0, false,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
@@ -107,31 +109,31 @@ static void led_task(void *pvParameters) {
 
                     // Continuous blink colors
                     case LED_COLOR_STATE_BLINK_RED:
-                        led_configure_blink(5, 0, 0, false,
+                        led_configure_blink(led_brightness, 0, 0, false,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_BLINK_GREEN:
-                        led_configure_blink(0, 5, 0, false,
+                        led_configure_blink(0, led_brightness, 0, false,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_BLINK_BLUE:
-                        led_configure_blink(0, 0, 5, false,
+                        led_configure_blink(0, 0, led_brightness, false,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_BLINK_YELLOW:
-                        led_configure_blink(5, 5, 0, false,
+                        led_configure_blink(led_brightness, led_brightness, 0, false,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_BLINK_WHITE:
-                        led_configure_blink(5, 5, 5, false,
+                        led_configure_blink(led_brightness, led_brightness, led_brightness, false,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
@@ -139,31 +141,31 @@ static void led_task(void *pvParameters) {
 
                     // One-shot blink colors
                     case LED_COLOR_STATE_BLINK_ONCE_RED:
-                        led_configure_blink(5, 0, 0, true,
+                        led_configure_blink(led_brightness, 0, 0, true,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_BLINK_ONCE_GREEN:
-                        led_configure_blink(0, 5, 0, true,
+                        led_configure_blink(0, led_brightness, 0, true,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_BLINK_ONCE_BLUE:
-                        led_configure_blink(0, 0, 5, true,
+                        led_configure_blink(0, 0, led_brightness, true,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_BLINK_ONCE_YELLOW:
-                        led_configure_blink(5, 5, 0, true,
+                        led_configure_blink(led_brightness, led_brightness, 0, true,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
                     case LED_COLOR_STATE_BLINK_ONCE_WHITE:
-                        led_configure_blink(5, 5, 5, true,
+                        led_configure_blink(led_brightness, led_brightness, led_brightness, true,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
@@ -200,17 +202,34 @@ static void led_task(void *pvParameters) {
 
 static void init_led_task() {
     // create light strip
-    ESP_ERROR_CHECK(led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip));
+    esp_err_t err = led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "led_strip_new_rmt_device failed: %s", esp_err_to_name(err));
+        return; // or handle error
+    }
     xTaskCreate(led_task, "LED_main", 4096, NULL, 6, NULL);
 
 }
 
 void set_led_rgb(uint8_t r, uint8_t g, uint8_t b) {
-    ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, r, g, b));
-    ESP_ERROR_CHECK(led_strip_refresh(led_strip));
+    esp_err_t err;
+    if (!led_strip) {
+        ESP_LOGE(TAG, "led_strip handle is NULL");
+        return;
+    }
+    err = led_strip_set_pixel(led_strip, 0, r, g, b);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "led_strip_set_pixel failed: %s", esp_err_to_name(err));
+        return;
+    }
+    err = led_strip_refresh(led_strip);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "led_strip_refresh failed: %s", esp_err_to_name(err));
+        return;
+    }
 }
 
 void setup_led_strip(QueueHandle_t led_evt_queue_p) {
-    init_led_task();
     led_evt_queue = led_evt_queue_p;
+    init_led_task();
 }
