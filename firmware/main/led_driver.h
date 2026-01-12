@@ -4,8 +4,6 @@
 extern "C" {
 #endif
 
-#define LED_GPIO GPIO_NUM_1
-
 /**
  * @brief Enum representing color states.
  */

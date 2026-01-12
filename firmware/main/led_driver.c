@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "led_strip.h"
 #include "led_driver.h"
+#include "device_config.h"
 
 
 static const char *TAG = "ESP_LED_TASK";
@@ -55,7 +56,9 @@ static inline void led_set_solid_color(uint8_t r, uint8_t g, uint8_t b,
 
 // c
 static void led_task(void *pvParameters) {
+#ifdef DEBUG_ENABLED
     ESP_LOGI(TAG, "LED task running");
+#endif
 
     led_state_t current_state = LED_COLOR_STATE_OFF;
     led_state_t requested_state = LED_COLOR_STATE_OFF;
@@ -80,7 +83,9 @@ static void led_task(void *pvParameters) {
     while (1) {
         if (xQueueReceive(led_evt_queue, &requested_state, tick_50ms) == pdTRUE) {
             if (requested_state != current_state) {
+#ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "LED event: code %u", requested_state);
+#endif
                 current_state = requested_state;
 
                 switch (requested_state) {
