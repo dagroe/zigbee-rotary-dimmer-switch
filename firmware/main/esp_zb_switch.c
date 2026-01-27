@@ -38,13 +38,21 @@ static switch_func_pair_t button_func_pair[] = {
 
 static QueueHandle_t led_evt_queue = NULL;
 
-// create a flag to signal when the encoder was rotated after button downm (to prevent button up)
-// static portMUX_TYPE s_encoder_mux = portMUX_INITIALIZER_UNLOCKED;
-// static volatile bool encoder_rotated_flag = false;
+// Shared state between button handler and encoder task for button+rotate feature
+// When button is held and encoder rotates, send HUE commands instead of brightness
+// When button is released after rotation, suppress the toggle command
+static portMUX_TYPE s_button_encoder_mux = portMUX_INITIALIZER_UNLOCKED;
+static volatile bool encoder_button_down = false;
+static volatile bool encoder_rotated_while_pressed = false;
+static volatile TickType_t button_press_tick = 0;
 
-// create a flag to signal whether the button is UP or DOWN to decie if we send BIRGHTNESS or HUE command on rotation
-// static portMUX_TYPE s_button_mux = portMUX_INITIALIZER_UNLOCKED;
-// static volatile bool encoder_button_down = false;
+// Debounce period: ignore encoder events within this time after button press
+// This prevents spurious encoder events from mechanical coupling when pressing the button
+#define ENCODER_DEBOUNCE_AFTER_PRESS_MS 50
+
+// Safety timeout: if button_down state persists longer than this, force reset
+// This prevents getting stuck if a release event is somehow missed
+#define BUTTON_STATE_TIMEOUT_MS 5000
 
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
 
@@ -52,47 +60,58 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
 {
     if (button_func_pair->func == SWITCH_ONOFF_TOGGLE_CONTROL) {
         #ifdef DEBUG_ENABLED
-        ESP_LOGI(TAG, "esp_zb_buttons_handler");
+        ESP_LOGI(TAG, "esp_zb_buttons_handler state=%d", state);
         #endif
 
-        // bool encoder_rotated_flag_was_set;
-        // taskENTER_CRITICAL(&s_encoder_mux);
-        // encoder_rotated_flag_was_set = encoder_rotated_flag;
-        // taskEXIT_CRITICAL(&s_encoder_mux);
-
-        // bool button_state = false;
         switch(state) {
-            case SWITCH_RELEASE_DETECTED:
-                // if (encoder_rotated_flag_was_set != true) {
-                    // send toggle command
+            case SWITCH_PRESS_DETECTED:
+                // Button pressed: record time and reset rotation flag
+                taskENTER_CRITICAL(&s_button_encoder_mux);
+                encoder_button_down = true;
+                encoder_rotated_while_pressed = false;
+                button_press_tick = xTaskGetTickCount();
+                taskEXIT_CRITICAL(&s_button_encoder_mux);
+                #ifdef DEBUG_ENABLED
+                ESP_EARLY_LOGI(TAG, "Button down, encoder_button_down=true");
+                #endif
+                break;
+
+            case SWITCH_RELEASE_DETECTED: {
+                // Short press release: send toggle only if encoder didn't rotate
+                bool rotated;
+                taskENTER_CRITICAL(&s_button_encoder_mux);
+                rotated = encoder_rotated_while_pressed;
+                encoder_button_down = false;
+                encoder_rotated_while_pressed = false;
+                taskEXIT_CRITICAL(&s_button_encoder_mux);
+
+                if (!rotated) {
                     esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
                     toggle_cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
                     toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
                     toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
                     #ifdef DEBUG_ENABLED
                     ESP_EARLY_LOGI(TAG, "Send 'on_off toggle' command");
-                    ESP_EARLY_LOGI(TAG, "Send button up");
                     #endif
                     esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req);
-                // }
-                // set encoder button state to UP
-                // button_state = false;
+                } else {
+                    #ifdef DEBUG_ENABLED
+                    ESP_EARLY_LOGI(TAG, "Toggle suppressed - encoder rotated while pressed");
+                    #endif
+                }
                 break;
-            case SWITCH_PRESS_DETECTED:
-                // reset flag
-                // taskENTER_CRITICAL(&s_encoder_mux);
-                // encoder_rotated_flag = false;
-                // taskEXIT_CRITICAL(&s_encoder_mux);
+            }
 
-                // set encoder button state to DOWN
-                #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Send button down");
-                #endif
-                // button_state = true;
-                break;
-            case SWITCH_LONG_RELEASE_DETECTED:
-                // if (encoder_rotated_flag_was_set != true) {
-                    // send off command
+            case SWITCH_LONG_RELEASE_DETECTED: {
+                // Long press release: send off only if encoder didn't rotate
+                bool rotated;
+                taskENTER_CRITICAL(&s_button_encoder_mux);
+                rotated = encoder_rotated_while_pressed;
+                encoder_button_down = false;
+                encoder_rotated_while_pressed = false;
+                taskEXIT_CRITICAL(&s_button_encoder_mux);
+
+                if (!rotated) {
                     esp_zb_zcl_on_off_cmd_t off_cmd_req;
                     off_cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
                     off_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
@@ -101,27 +120,50 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     ESP_EARLY_LOGI(TAG, "Send 'on_off off' command");
                     #endif
                     esp_zb_zcl_on_off_cmd_req(&off_cmd_req);
-                // }
-                // set encoder button state to UP
-                // button_state = false;
+                } else {
+                    #ifdef DEBUG_ENABLED
+                    ESP_EARLY_LOGI(TAG, "Off suppressed - encoder rotated while pressed");
+                    #endif
+                }
                 break;
-            case SWITCH_HOLD_RELEASE_DETECTED:
-                // set encoder button state to UP
+            }
+
+            case SWITCH_LONG_PRESS_DETECTED:
+                // Long press detected (button still held): no action needed, state stays
                 #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Send button up");
+                ESP_EARLY_LOGI(TAG, "Long press detected, button still held");
                 #endif
-                // button_state = false;
                 break;
+
+            case SWITCH_HOLD_DETECTED:
+                // Hold detected (button still held): no action needed, state stays
+                #ifdef DEBUG_ENABLED
+                ESP_EARLY_LOGI(TAG, "Hold detected, button still held");
+                #endif
+                break;
+
+            case SWITCH_HOLD_RELEASE_DETECTED:
+                // Hold release (after very long press): just clear button state
+                taskENTER_CRITICAL(&s_button_encoder_mux);
+                encoder_button_down = false;
+                encoder_rotated_while_pressed = false;
+                taskEXIT_CRITICAL(&s_button_encoder_mux);
+                #ifdef DEBUG_ENABLED
+                ESP_EARLY_LOGI(TAG, "Hold release, encoder_button_down=false");
+                #endif
+                break;
+
             default:
+                // Safety: any unknown state should clear button_down to prevent stuck state
+                taskENTER_CRITICAL(&s_button_encoder_mux);
+                encoder_button_down = false;
+                encoder_rotated_while_pressed = false;
+                taskEXIT_CRITICAL(&s_button_encoder_mux);
+                #ifdef DEBUG_ENABLED
+                ESP_EARLY_LOGI(TAG, "Unknown state %d, clearing button state", state);
+                #endif
                 break;
         }
-
-
-        // Do not write button state for now, do not support push and rotate
-        // We have problem to distinguish between push and rotate and push. When just pushing but the encoder fires, button up will be ignored
-        //taskENTER_CRITICAL(&s_button_mux);
-        //encoder_button_down = button_state;
-        //taskEXIT_CRITICAL(&s_button_mux);
     }
 
     if (button_func_pair->func == SWITCH_COMMISION_CONTROL) {
@@ -260,58 +302,99 @@ static void encoder_task(void *pvParameters) {
     ESP_LOGI(TAG, "Queue created");
     #endif
 
-    bool button_state = false;
-
     while (1)
     {
+        // Safety check: periodically verify button state isn't stuck
+        // This runs every iteration (every 1000ms timeout or when event received)
+        {
+            TickType_t now = xTaskGetTickCount();
+            taskENTER_CRITICAL(&s_button_encoder_mux);
+            if (encoder_button_down) {
+                TickType_t elapsed_ticks = now - button_press_tick;
+                if (elapsed_ticks > pdMS_TO_TICKS(BUTTON_STATE_TIMEOUT_MS)) {
+                    // Button state has been "down" for too long - force reset
+                    encoder_button_down = false;
+                    encoder_rotated_while_pressed = false;
+                    taskEXIT_CRITICAL(&s_button_encoder_mux);
+                    ESP_LOGW(TAG, "Button state timeout after %lu ms - force reset",
+                             (unsigned long)(elapsed_ticks * portTICK_PERIOD_MS));
+                } else {
+                    taskEXIT_CRITICAL(&s_button_encoder_mux);
+                }
+            } else {
+                taskEXIT_CRITICAL(&s_button_encoder_mux);
+            }
+        }
+
         // Wait for incoming events on the event queue.
         rotary_encoder_event_t event = { 0 };
         if (xQueueReceive(encoder_event_queue, &event, 1000 / portTICK_PERIOD_MS) == pdTRUE)
         {
+            // Read button state and press time atomically
+            bool button_down;
+            TickType_t press_tick;
+            taskENTER_CRITICAL(&s_button_encoder_mux);
+            button_down = encoder_button_down;
+            press_tick = button_press_tick;
+            taskEXIT_CRITICAL(&s_button_encoder_mux);
+
             #ifdef DEBUG_ENABLED
             ESP_LOGI(TAG, "Event: position %lu, direction %s, button %s", event.state.position,
                      event.state.direction ? (event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? "CW" : "CCW") : "NOT_SET",
-                     button_state ? "DOWN" : "UP");
+                     button_down ? "DOWN" : "UP");
             #endif
-            if (button_state) {
-                // button pressed, send color command
-                // TODO: try sending esp_zb_zcl_color_step_color_temperature_cmd_t
-                esp_zb_zcl_color_step_hue_cmd_t cmd_req;
-                cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
-                cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                cmd_req.step_mode = event.state.direction ? (event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? 0 : 1) : 0; // down
-                cmd_req.step_size = 5;
-                cmd_req.transition_time = 1;
-                #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Send 'color step' command");
-                #endif
-                esp_zb_zcl_color_step_hue_cmd_req(&cmd_req);
+
+            if (button_down) {
+                // Button is pressed - check if we're past the debounce period
+                TickType_t now = xTaskGetTickCount();
+                TickType_t elapsed_ticks = now - press_tick;
+                TickType_t debounce_ticks = pdMS_TO_TICKS(ENCODER_DEBOUNCE_AFTER_PRESS_MS);
+
+                if (elapsed_ticks >= debounce_ticks) {
+                    // Past debounce period - this is intentional rotation while button held
+                    // Mark that rotation occurred (to suppress toggle on release)
+                    taskENTER_CRITICAL(&s_button_encoder_mux);
+                    encoder_rotated_while_pressed = true;
+                    taskEXIT_CRITICAL(&s_button_encoder_mux);
+
+                    // Send color/hue command
+                    esp_zb_zcl_color_step_hue_cmd_t cmd_req;
+                    cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
+                    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+                    cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? 0 : 1;
+                    cmd_req.step_size = 5;
+                    cmd_req.transition_time = 1;
+                    #ifdef DEBUG_ENABLED
+                    ESP_EARLY_LOGI(TAG, "Send 'color step' command (button held)");
+                    #endif
+                    esp_zb_zcl_color_step_hue_cmd_req(&cmd_req);
+
+                    led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_WHITE;
+                    xQueueSend(led_evt_queue, &led_state_success, 0);
+                } else {
+                    // Within debounce period - ignore this encoder event (likely noise from button press)
+                    #ifdef DEBUG_ENABLED
+                    ESP_LOGI(TAG, "Encoder event ignored (within debounce period, %lu < %lu ticks)",
+                             (unsigned long)elapsed_ticks, (unsigned long)debounce_ticks);
+                    #endif
+                }
             } else {
-                // button released, send brightness level command
+                // Button not pressed - send brightness level command
                 esp_zb_zcl_level_step_cmd_t cmd_req;
                 cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
                 cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                cmd_req.step_mode = event.state.direction ? (event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? 0 : 1) : 0; // down
+                cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? 0 : 1;
                 cmd_req.step_size = 15;
                 cmd_req.transition_time = 1;
                 #ifdef DEBUG_ENABLED
                 ESP_EARLY_LOGI(TAG, "Send 'level step' command");
                 #endif
                 esp_zb_zcl_level_step_cmd_req(&cmd_req);
+
+                led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_WHITE;
+                xQueueSend(led_evt_queue, &led_state_success, 0);
             }
-            // taskENTER_CRITICAL(&s_encoder_mux);
-            // encoder_rotated_flag = true;
-            // taskEXIT_CRITICAL(&s_encoder_mux);
-            led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_WHITE;
-            xQueueSend(led_evt_queue, &led_state_success, 0);          
         }
-
-        // check button state queue
-
-        // bool encoder_rotated_flag_was_set;
-        // taskENTER_CRITICAL(&s_button_mux);
-        // button_state = encoder_button_down;
-        // taskEXIT_CRITICAL(&s_button_mux);
     }
     ESP_LOGE(TAG, "queue receive failed");
 
@@ -339,5 +422,5 @@ void app_main(void) {
 
     switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair), esp_zb_buttons_handler);
     xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 4, NULL);
-    xTaskCreate(encoder_task, "Ecoder_main", 4096, NULL, 5, NULL);
+    xTaskCreate(encoder_task, "Encoder_main", 4096, NULL, 5, NULL);
 }
