@@ -27,7 +27,7 @@ extern "C" {
 
 /* Zigbee configuration ============================================================== */
 #define MAX_CHILDREN                    10          /* the max amount of connected devices */
-#define INSTALLCODE_POLICY_ENABLE       false       /* enable the install code policy for security */
+#define INSTALLCODE_POLICY_ENABLE       true        /* enable the install code policy for security */
 #define HA_ONOFF_SWITCH_ENDPOINT        1           /* esp light switch device endpoint */
 #define ESP_ZB_PRIMARY_CHANNEL_MASK     ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK  /* Zigbee primary channel mask use in the example */
 

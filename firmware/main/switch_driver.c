@@ -56,16 +56,20 @@
 
 static QueueHandle_t gpio_evt_queue = NULL;
 /* button function pair, should be defined in switch example source file */
-static switch_func_pair_t *switch_func_pair;
+static switch_func_pair_t *switch_func_pair = NULL;
 /* call back function pointer */
-static esp_switch_callback_t func_ptr;
+static esp_switch_callback_t func_ptr = NULL;
 /* which button is pressed */
-static uint8_t switch_num;
+static uint8_t switch_num = 0;
+/* flag to indicate driver is fully initialized */
+static volatile bool driver_initialized = false;
 static const char *TAG = "ESP_ZB_SWITCH";
 
 static void IRAM_ATTR gpio_isr_handler(void *arg)
 {
-    xQueueSendFromISR(gpio_evt_queue, (switch_func_pair_t *)arg, NULL);
+    if (gpio_evt_queue != NULL) {
+        xQueueSendFromISR(gpio_evt_queue, (switch_func_pair_t *)arg, NULL);
+    }
 }
 
 /**
@@ -75,6 +79,9 @@ static void IRAM_ATTR gpio_isr_handler(void *arg)
  */
 static void switch_driver_gpios_intr_enabled(bool enabled)
 {
+    if (switch_func_pair == NULL || switch_num == 0) {
+        return;
+    }
     for (int i = 0; i < switch_num; ++i) {
         if (enabled) {
             gpio_intr_enable((switch_func_pair + i)->pin);
@@ -247,33 +254,41 @@ static bool switch_driver_gpio_init(switch_func_pair_t *button_func_pair, uint8_
     ESP_ERROR_CHECK(gpio_config(&io_conf));
     /* create a queue to handle gpio event from isr */
     gpio_evt_queue = xQueueCreate(10, sizeof(switch_func_pair_t));
-    if ( gpio_evt_queue == 0) {
+    if (gpio_evt_queue == 0) {
         ESP_LOGE(TAG, "Queue was not created and must not be used");
         return false;
     }
     /* install gpio isr service */
-    esp_err_t err; 
+    esp_err_t err;
     err = gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "gpio_install_isr_service failed: %s", esp_err_to_name(err));
+        vQueueDelete(gpio_evt_queue);
+        gpio_evt_queue = NULL;
         return false;
-    } else {
-#ifdef DEBUG_ENABLED
-        ESP_LOGI(TAG, "gpio_install_isr_service OK");
-#endif
     }
+#ifdef DEBUG_ENABLED
+    ESP_LOGI(TAG, "gpio_install_isr_service OK");
+#endif
+
     for (int i = 0; i < button_num; ++i) {
         gpio_num_t pin = (button_func_pair + i)->pin;
         err = gpio_isr_handler_add(pin, gpio_isr_handler, (void *) (button_func_pair + i));
         if (err != ESP_OK) {
             ESP_LOGE(TAG, "gpio_isr_handler_add failed: %s", esp_err_to_name(err));
+            /* Clean up previously added handlers */
+            for (int j = 0; j < i; ++j) {
+                gpio_isr_handler_remove((button_func_pair + j)->pin);
+            }
+            gpio_uninstall_isr_service();
+            vQueueDelete(gpio_evt_queue);
+            gpio_evt_queue = NULL;
             return false;
-        } else {
-#ifdef DEBUG_ENABLED
-            ESP_LOGI(TAG, "gpio_isr_handler_add OK");
-#endif
         }
-        // Explicitly enable interrupt for this pin
+#ifdef DEBUG_ENABLED
+        ESP_LOGI(TAG, "gpio_isr_handler_add OK");
+#endif
+        /* Explicitly enable interrupt for this pin */
         gpio_intr_enable(pin);
 #ifdef DEBUG_ENABLED
         ESP_LOGI(TAG, "ISR attached and enabled for GPIO %d", pin);
@@ -284,8 +299,17 @@ static bool switch_driver_gpio_init(switch_func_pair_t *button_func_pair, uint8_
     BaseType_t created = xTaskCreate(switch_driver_button_detected, "button_detected", 4096, NULL, 10, NULL);
     if (created != pdPASS) {
         ESP_LOGE(TAG, "Failed to create button_detected task");
+        /* Clean up all ISR handlers */
+        for (int i = 0; i < button_num; ++i) {
+            gpio_isr_handler_remove((button_func_pair + i)->pin);
+        }
+        gpio_uninstall_isr_service();
+        vQueueDelete(gpio_evt_queue);
+        gpio_evt_queue = NULL;
         return false;
     }
+
+    driver_initialized = true;
 
 #ifdef DEBUG_ENABLED
     ESP_LOGI(TAG, "button_detected task created");

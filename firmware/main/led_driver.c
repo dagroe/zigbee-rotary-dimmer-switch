@@ -30,9 +30,9 @@ led_strip_rmt_config_t rmt_config = {
 };
 
 /// Create the LED strip object
-led_strip_handle_t led_strip;
+static led_strip_handle_t led_strip = NULL;
 
-QueueHandle_t led_evt_queue;
+static QueueHandle_t led_evt_queue = NULL;
 
 // Blink helpers at file scope (C-safe)
 static inline void led_configure_blink(uint8_t r, uint8_t g, uint8_t b, bool one_shot,
