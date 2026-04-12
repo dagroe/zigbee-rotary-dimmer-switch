@@ -141,13 +141,15 @@ static void switch_driver_button_detected(void *arg)
 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "value !== last_value");
 #endif
+                vTaskDelay(10 / portTICK_PERIOD_MS);
                 continue;
-            } 
+            }
 
             if (value_time < last_value_time + BUTTON_DEBOUNCE_DURATION_MS) {
 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "< debounce");
 #endif
+                vTaskDelay(10 / portTICK_PERIOD_MS);
                 continue;
             }
 
