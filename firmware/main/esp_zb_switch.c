@@ -286,7 +286,7 @@ static void encoder_task(void *pvParameters) {
     rotary_encoder_info_t encoder_info = { 0 };
     ESP_ERROR_CHECK(rotary_encoder_init(&encoder_info, ROT_ENC_A_GPIO, ROT_ENC_B_GPIO));
     ESP_ERROR_CHECK(rotary_encoder_enable_half_steps(&encoder_info, ENABLE_HALF_STEPS));
-#ifdef FLIP_DIRECTION
+#if FLIP_DIRECTION
     ESP_ERROR_CHECK(rotary_encoder_flip_direction(&encoder_info));
 #endif
     #ifdef DEBUG_ENABLED
