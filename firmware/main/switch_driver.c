@@ -61,8 +61,6 @@ static switch_func_pair_t *switch_func_pair = NULL;
 static esp_switch_callback_t func_ptr = NULL;
 /* which button is pressed */
 static uint8_t switch_num = 0;
-/* flag to indicate driver is fully initialized */
-static volatile bool driver_initialized = false;
 static const char *TAG = "ESP_ZB_SWITCH";
 
 static void IRAM_ATTR gpio_isr_handler(void *arg)
@@ -310,8 +308,6 @@ static bool switch_driver_gpio_init(switch_func_pair_t *button_func_pair, uint8_
         gpio_evt_queue = NULL;
         return false;
     }
-
-    driver_initialized = true;
 
 #ifdef DEBUG_ENABLED
     ESP_LOGI(TAG, "button_detected task created");
