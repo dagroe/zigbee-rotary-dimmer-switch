@@ -82,7 +82,15 @@ static void led_task(void *pvParameters) {
 
     while (1) {
         if (xQueueReceive(led_evt_queue, &requested_state, tick_50ms) == pdTRUE) {
-            if (requested_state != current_state) {
+            // Always process one-shot blink events so they retrigger on rapid
+            // encoder rotations even when the same state is requested again.
+            bool is_one_shot = (requested_state == LED_COLOR_STATE_FEEDBACK_WHITE_ONE_PULSE
+                                || requested_state == LED_COLOR_STATE_BLINK_ONCE_RED
+                                || requested_state == LED_COLOR_STATE_BLINK_ONCE_GREEN
+                                || requested_state == LED_COLOR_STATE_BLINK_ONCE_BLUE
+                                || requested_state == LED_COLOR_STATE_BLINK_ONCE_YELLOW
+                                || requested_state == LED_COLOR_STATE_BLINK_ONCE_WHITE);
+            if (requested_state != current_state || is_one_shot) {
 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "LED event: code %u", requested_state);
 #endif
