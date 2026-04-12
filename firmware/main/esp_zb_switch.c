@@ -434,7 +434,10 @@ void app_main(void) {
     setup_led_strip(led_evt_queue);
     set_led_rgb(16, 0, 0);
 
-    switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair), esp_zb_buttons_handler);
+    if (!switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair), esp_zb_buttons_handler)) {
+        ESP_LOGE(TAG, "Switch driver init failed");
+        return;
+    }
     xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 4, NULL);
     xTaskCreate(encoder_task, "Encoder_main", 4096, NULL, 5, NULL);
 }
