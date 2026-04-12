@@ -54,6 +54,10 @@ static volatile TickType_t button_press_tick = 0;
 // This prevents getting stuck if a release event is somehow missed
 #define BUTTON_STATE_TIMEOUT_MS 5000
 
+// ZCL step mode values (spec section 3.10.2.3.1 / 5.2.2.3.1)
+#define ZCL_STEP_MODE_UP   0x00
+#define ZCL_STEP_MODE_DOWN 0x01
+
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
 
 static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_state_t state)
@@ -374,7 +378,7 @@ static void encoder_task(void *pvParameters) {
                     esp_zb_zcl_color_step_hue_cmd_t cmd_req;
                     cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
                     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                    cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? 0 : 1;
+                    cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? ZCL_STEP_MODE_UP : ZCL_STEP_MODE_DOWN;
                     cmd_req.step_size = 5;
                     cmd_req.transition_time = 1;
                     #ifdef DEBUG_ENABLED
@@ -396,7 +400,7 @@ static void encoder_task(void *pvParameters) {
                 esp_zb_zcl_level_step_cmd_t cmd_req;
                 cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
                 cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? 0 : 1;
+                cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? ZCL_STEP_MODE_UP : ZCL_STEP_MODE_DOWN;
                 cmd_req.step_size = 15;
                 cmd_req.transition_time = 1;
                 #ifdef DEBUG_ENABLED
