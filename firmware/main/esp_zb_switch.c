@@ -413,9 +413,6 @@ static void encoder_task(void *pvParameters) {
             }
         }
     }
-    ESP_LOGE(TAG, "queue receive failed");
-
-    ESP_ERROR_CHECK(rotary_encoder_uninit(&encoder_info));
 }
 
 void app_main(void) {
