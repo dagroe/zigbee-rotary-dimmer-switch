@@ -170,9 +170,22 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
 
         switch(state) {
             case SWITCH_RELEASE_DETECTED:
+                // Short press: trigger network steering (rejoin/find new network)
+                ESP_LOGI(TAG, "Commission button: start network steering");
+                esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
+                {
+                    led_state_t led_state = LED_COLOR_STATE_BLINK_ONCE_YELLOW;
+                    xQueueSend(led_evt_queue, &led_state, 0);
+                }
                 break;
             case SWITCH_HOLD_DETECTED:
-                // TODO: go into commission mode
+                // Long hold (5s): factory reset
+                ESP_LOGW(TAG, "Commission button held: factory reset");
+                {
+                    led_state_t led_state = LED_COLOR_STATE_BLINK_RED;
+                    xQueueSend(led_evt_queue, &led_state, 0);
+                }
+                esp_zb_factory_reset();
                 break;
             default:
                 break;
