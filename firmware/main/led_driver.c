@@ -113,7 +113,7 @@ static void led_task(void *pvParameters) {
                                             &solid_r, &solid_g, &solid_b,
                                             &phase_deadline, blink_half_period);
                         break;
-                    case LED_COLOR_STATE_WATITNG_YELLOW_BLINK:
+                    case LED_COLOR_STATE_WAITING_YELLOW_BLINK:
                         led_configure_blink(led_brightness, led_brightness, 0, false,
                                             &blink_enabled, &blink_one_shot, &blink_on_phase,
                                             &solid_r, &solid_g, &solid_b,
