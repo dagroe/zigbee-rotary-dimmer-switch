@@ -16192,7 +16192,7 @@
 				)
 			)
 		)
-		(property "Value" "10uF/25V(20%)(NC)"
+		(property "Value" "10uF/25V(20%)"
 			(at 171.45 29.21 90)
 			(effects
 				(font
