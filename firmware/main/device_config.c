@@ -5,7 +5,7 @@
 
 char modelid[] = { 12, 'E','S','P','_','D','I','M','M','E','R','_','1' };
 char manufname[] = { 14, 'D','G',' ','E','l','e','c','t','r','o','n','i','c','s' };
-char sw_build_version[] = { 9, '2','0','2','5','1','0','1','9','1' };
+char sw_build_version[] = { 10, '2','0','2','5','1','0','1','9','T','1' };
 
 void configure_device(void)
 {
@@ -26,6 +26,7 @@ void configure_device(void)
     esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_POWER_SOURCE_ID, &power_source_id);
     esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_MODEL_IDENTIFIER_ID, &modelid[0]);
     esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_MANUFACTURER_NAME_ID, &manufname[0]);
+    esp_zb_basic_cluster_add_attr(esp_zb_basic_cluster, ESP_ZB_ZCL_ATTR_BASIC_SW_BUILD_ID, &sw_build_version[0]);
     /* identify cluster create with fully customized */
     esp_zb_attribute_list_t *esp_zb_identify_cluster = esp_zb_zcl_attr_list_create(ESP_ZB_ZCL_CLUSTER_ID_IDENTIFY);
     esp_zb_identify_cluster_add_attr(esp_zb_identify_cluster, ESP_ZB_ZCL_ATTR_IDENTIFY_IDENTIFY_TIME_ID, &identify_time);
