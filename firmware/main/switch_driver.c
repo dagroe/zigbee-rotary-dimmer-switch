@@ -327,10 +327,11 @@ bool switch_driver_init(switch_func_pair_t *button_func_pair, uint8_t button_num
 {
     esp_log_level_set(TAG, ESP_LOG_INFO); // ensure INFO visible for this tag
     
+    func_ptr = cb;
     if (!switch_driver_gpio_init(button_func_pair, button_num)) {
+        func_ptr = NULL;
         return false;
     }
-    func_ptr = cb;
 #ifdef DEBUG_ENABLED
     ESP_LOGI(TAG, "switch_driver_init init success");
 #endif
