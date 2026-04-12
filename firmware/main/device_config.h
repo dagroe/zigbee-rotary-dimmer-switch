@@ -7,7 +7,7 @@ extern "C" {
 #include "esp_zigbee_core.h"
 
 // Debug flag
-#define DEBUG_ENABLED 0
+// #define DEBUG_ENABLED 0
 
 /* LED config ======================================================================== */
 #define LED_GPIO GPIO_NUM_1
