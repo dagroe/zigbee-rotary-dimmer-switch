@@ -432,7 +432,8 @@ void app_main(void) {
 
     // create light strip
     setup_led_strip(led_evt_queue);
-    set_led_rgb(16, 0, 0);
+    led_state_t led_state_init = LED_COLOR_STATE_WARN_RED;
+    xQueueSend(led_evt_queue, &led_state_init, 0);
 
     if (!switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair), esp_zb_buttons_handler)) {
         ESP_LOGE(TAG, "Switch driver init failed");
