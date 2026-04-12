@@ -1,5 +1,9 @@
 #pragma once
 
+#include <stdint.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
