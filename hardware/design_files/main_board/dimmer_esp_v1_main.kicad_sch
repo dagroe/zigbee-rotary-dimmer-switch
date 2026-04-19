@@ -5482,7 +5482,7 @@
 	)
 	(rectangle
 		(start 123.19 123.19)
-		(end 177.8 161.29)
+		(end 176.53 163.83)
 		(stroke
 			(width 0)
 			(type default)
@@ -5610,6 +5610,26 @@
 		)
 		(uuid "ae601dc2-2e71-4139-a098-a398601c6085")
 	)
+	(text "C11: ESP32 bypass cap"
+		(exclude_from_sim no)
+		(at 199.898 18.288 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d50")
+	)
+	(text "C12: WS2812B bypass cap"
+		(exclude_from_sim no)
+		(at 162.814 161.798 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d51")
+	)
 	(text "External switch connectors"
 		(exclude_from_sim no)
 		(at 264.16 100.838 0)
@@ -5713,6 +5733,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "42a83c6f-58e2-4933-b930-94841d69399c")
+	)
+	(junction
+		(at 163.83 151.13)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "47de1e31-9201-4c0a-bbda-39e08555be34")
 	)
 	(junction
 		(at 125.73 54.61)
@@ -5821,6 +5847,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "74d6586c-c6fb-4b6a-96cf-df7c42083be8")
+	)
+	(junction
+		(at 163.83 134.62)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "7521652a-36d9-44f9-a7c7-24106b848bfd")
 	)
 	(junction
 		(at 36.83 99.06)
@@ -6039,7 +6071,7 @@
 		(uuid "11eb887d-4975-4a73-8645-e631f6f3c8b6")
 	)
 	(no_connect
-		(at 168.91 142.24)
+		(at 171.45 142.24)
 		(uuid "12e79a72-e212-440e-b575-415f220061ba")
 	)
 	(no_connect
@@ -6075,30 +6107,6 @@
 		(uuid "7ba67e3a-4307-46b5-916f-17079419a4c2")
 	)
 	(no_connect
-		(at 95.25 44.45)
-		(uuid "b5695d55-3bdb-4724-92c8-a8a30d2457e0")
-	)
-	(no_connect
-		(at 78.74 48.26)
-		(uuid "cbaec4b7-2914-464d-9dac-50db97f27ada")
-	)
-	(no_connect
-		(at 223.52 76.2)
-		(uuid "d1269e96-68bd-4bf9-8f0d-4fd4d8637a99")
-	)
-	(no_connect
-		(at 246.38 77.47)
-		(uuid "dc28cd74-389a-4032-94b7-b37e81f54092")
-	)
-	(no_connect
-		(at 246.38 74.93)
-		(uuid "ddea19a5-700f-4293-9fa2-6f6450916622")
-	)
-	(no_connect
-		(at 223.52 40.64)
-		(uuid "e21be7f8-5ddf-4549-970d-5ef9f9f41fbf")
-	)
-	(no_connect
 		(at 223.52 33.02)
 		(uuid "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c01")
 	)
@@ -6125,6 +6133,30 @@
 	(no_connect
 		(at 246.38 87.63)
 		(uuid "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c07")
+	)
+	(no_connect
+		(at 95.25 44.45)
+		(uuid "b5695d55-3bdb-4724-92c8-a8a30d2457e0")
+	)
+	(no_connect
+		(at 78.74 48.26)
+		(uuid "cbaec4b7-2914-464d-9dac-50db97f27ada")
+	)
+	(no_connect
+		(at 223.52 76.2)
+		(uuid "d1269e96-68bd-4bf9-8f0d-4fd4d8637a99")
+	)
+	(no_connect
+		(at 246.38 77.47)
+		(uuid "dc28cd74-389a-4032-94b7-b37e81f54092")
+	)
+	(no_connect
+		(at 246.38 74.93)
+		(uuid "ddea19a5-700f-4293-9fa2-6f6450916622")
+	)
+	(no_connect
+		(at 223.52 40.64)
+		(uuid "e21be7f8-5ddf-4549-970d-5ef9f9f41fbf")
 	)
 	(wire
 		(pts
@@ -6188,7 +6220,7 @@
 	)
 	(wire
 		(pts
-			(xy 134.62 143.51) (xy 134.62 142.24)
+			(xy 129.54 149.86) (xy 129.54 142.24)
 		)
 		(stroke
 			(width 0)
@@ -6208,7 +6240,7 @@
 	)
 	(wire
 		(pts
-			(xy 149.86 142.24) (xy 153.67 142.24)
+			(xy 144.78 142.24) (xy 146.05 142.24)
 		)
 		(stroke
 			(width 0)
@@ -6275,6 +6307,16 @@
 			(type default)
 		)
 		(uuid "10c21c58-7972-421c-a5cd-7b6e0b995b9d")
+	)
+	(wire
+		(pts
+			(xy 198.12 25.4) (xy 198.12 24.13)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "113f9b79-f53e-4f47-a5ed-8ebfca35e126")
 	)
 	(wire
 		(pts
@@ -6368,16 +6410,6 @@
 	)
 	(wire
 		(pts
-			(xy 161.29 132.08) (xy 161.29 134.62)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1de9601b-e5bc-44b4-8c04-363e559ebe42")
-	)
-	(wire
-		(pts
 			(xy 218.44 86.36) (xy 223.52 86.36)
 		)
 		(stroke
@@ -6455,6 +6487,16 @@
 			(type default)
 		)
 		(uuid "2a34290b-0d52-4e19-b3de-2e6b0b5be633")
+	)
+	(wire
+		(pts
+			(xy 198.12 35.56) (xy 198.12 33.02)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2a5bbad0-00cd-4922-9566-ccfa4b8de106")
 	)
 	(wire
 		(pts
@@ -6778,7 +6820,7 @@
 	)
 	(wire
 		(pts
-			(xy 142.24 149.86) (xy 142.24 152.4)
+			(xy 137.16 149.86) (xy 137.16 152.4)
 		)
 		(stroke
 			(width 0)
@@ -7048,6 +7090,16 @@
 	)
 	(wire
 		(pts
+			(xy 173.99 138.43) (xy 175.26 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7532f9d1-9e7d-4dc5-9d45-994bd5a695af")
+	)
+	(wire
+		(pts
 			(xy 109.22 146.05) (xy 109.22 144.78)
 		)
 		(stroke
@@ -7198,6 +7250,16 @@
 	)
 	(wire
 		(pts
+			(xy 163.83 151.13) (xy 167.64 151.13)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "822759c2-59e8-4f7e-bcda-57abbd5404b9")
+	)
+	(wire
+		(pts
 			(xy 218.44 43.18) (xy 223.52 43.18)
 		)
 		(stroke
@@ -7278,6 +7340,16 @@
 	)
 	(wire
 		(pts
+			(xy 153.67 142.24) (xy 156.21 142.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8c3aaf2e-3ca2-4326-923f-6316066c883a")
+	)
+	(wire
+		(pts
 			(xy 35.56 48.26) (xy 35.56 49.53)
 		)
 		(stroke
@@ -7335,6 +7407,16 @@
 			(type default)
 		)
 		(uuid "92ee31e6-787c-4f2d-9aee-7cfed4221689")
+	)
+	(wire
+		(pts
+			(xy 173.99 134.62) (xy 163.83 134.62)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9482aaa6-7c4e-45b0-8b6b-09a37953a010")
 	)
 	(wire
 		(pts
@@ -7478,7 +7560,7 @@
 	)
 	(wire
 		(pts
-			(xy 161.29 149.86) (xy 161.29 152.4)
+			(xy 163.83 149.86) (xy 163.83 151.13)
 		)
 		(stroke
 			(width 0)
@@ -7528,7 +7610,7 @@
 	)
 	(wire
 		(pts
-			(xy 128.27 143.51) (xy 134.62 143.51)
+			(xy 128.27 149.86) (xy 129.54 149.86)
 		)
 		(stroke
 			(width 0)
@@ -7618,13 +7700,13 @@
 	)
 	(wire
 		(pts
-			(xy 142.24 132.08) (xy 142.24 134.62)
+			(xy 173.99 138.43) (xy 173.99 134.62)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
-		(uuid "ae7e4cba-4fcb-464f-be48-3c3b096ca249")
+		(uuid "aeddeae4-e2c3-4eb2-9d5e-327d667047a9")
 	)
 	(wire
 		(pts
@@ -7858,16 +7940,6 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 139.7) (xy 134.62 139.7)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d7611cfa-b844-4a1a-9bb5-3203f09cc4b0")
-	)
-	(wire
-		(pts
 			(xy 57.15 163.83) (xy 57.15 157.48)
 		)
 		(stroke
@@ -8015,6 +8087,16 @@
 			(type default)
 		)
 		(uuid "e695197c-ddd7-46df-98a3-2e9bda0ad20c")
+	)
+	(wire
+		(pts
+			(xy 163.83 151.13) (xy 163.83 152.4)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e6adc1c6-ff24-4fda-8c7c-c8402b6a5c99")
 	)
 	(wire
 		(pts
@@ -8196,6 +8278,16 @@
 		)
 		(uuid "fdef3aa0-b3cf-4221-bf9a-e0df81992c78")
 	)
+	(wire
+		(pts
+			(xy 175.26 138.43) (xy 175.26 151.13)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ff1b1418-f76b-495d-8978-75fda3073b0c")
+	)
 	(label "UART_RXD"
 		(at 251.46 85.09 0)
 		(effects
@@ -8317,7 +8409,7 @@
 		(uuid "7962167b-096f-423e-98d8-62e798c50cf3")
 	)
 	(label "D01"
-		(at 128.27 143.51 180)
+		(at 128.27 149.86 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -8710,7 +8802,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 142.24 152.4 0)
+		(at 137.16 152.4 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8719,7 +8811,7 @@
 		(fields_autoplaced yes)
 		(uuid "0ba6b374-3889-440a-8efc-313aa2641f28")
 		(property "Reference" "#PWR024"
-			(at 142.24 158.75 0)
+			(at 137.16 158.75 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8728,7 +8820,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 142.24 157.48 0)
+			(at 137.16 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8736,7 +8828,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 142.24 152.4 0)
+			(at 137.16 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8745,7 +8837,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 142.24 152.4 0)
+			(at 137.16 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8754,7 +8846,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 142.24 152.4 0)
+			(at 137.16 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9061,16 +9153,15 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 132.08 139.7 270)
+		(at 129.54 139.7 270)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "125ef695-7a71-4137-a151-cf214b22b968")
 		(property "Reference" "#PWR022"
-			(at 125.73 139.7 0)
+			(at 123.19 139.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9079,7 +9170,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 128.27 139.6999 90)
+			(at 129.54 137.414 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9088,7 +9179,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 132.08 139.7 0)
+			(at 129.54 139.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9097,7 +9188,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 132.08 139.7 0)
+			(at 129.54 139.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9106,7 +9197,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 132.08 139.7 0)
+			(at 129.54 139.7 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9302,7 +9393,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "1895474d-5d30-4f57-8067-e0edd7b6d275")
-		(property "Reference" "C9"
+		(property "Reference" "C11"
 			(at 205.74 115.5699 0)
 			(effects
 				(font
@@ -9374,7 +9465,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "C9")
+					(reference "C11")
 					(unit 1)
 				)
 			)
@@ -9390,7 +9481,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "1ab45328-40f9-4519-8007-9f5623b89593")
-		(property "Reference" "#PWR032"
+		(property "Reference" "#PWR034"
 			(at 181.61 34.29 0)
 			(effects
 				(font
@@ -9441,7 +9532,7 @@
 		(instances
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR032")
+					(reference "#PWR034")
 					(unit 1)
 				)
 			)
@@ -10574,16 +10665,15 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 142.24 132.08 0)
+		(at 137.16 134.62 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "2ef7b5e2-943f-4eb1-a6d0-45074541da79")
 		(property "Reference" "#PWR023"
-			(at 142.24 135.89 0)
+			(at 137.16 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10592,7 +10682,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 142.24 127 0)
+			(at 140.208 132.588 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10600,7 +10690,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 142.24 132.08 0)
+			(at 137.16 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10609,7 +10699,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 142.24 132.08 0)
+			(at 137.16 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10618,7 +10708,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 142.24 132.08 0)
+			(at 137.16 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11017,7 +11107,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 161.29 132.08 0)
+		(at 163.83 134.62 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -11026,7 +11116,7 @@
 		(fields_autoplaced yes)
 		(uuid "43fd8e28-57dc-484e-bbe7-2324a08f468d")
 		(property "Reference" "#PWR028"
-			(at 161.29 135.89 0)
+			(at 163.83 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11035,7 +11125,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 161.29 127 0)
+			(at 163.83 129.54 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11043,7 +11133,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 161.29 132.08 0)
+			(at 163.83 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11052,7 +11142,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 161.29 132.08 0)
+			(at 163.83 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11061,7 +11151,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 161.29 132.08 0)
+			(at 163.83 134.62 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -11091,7 +11181,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "472179c9-72df-4fed-83b2-25a3ef71c7d4")
-		(property "Reference" "#PWR036"
+		(property "Reference" "#PWR040"
 			(at 212.09 76.2 0)
 			(effects
 				(font
@@ -11142,7 +11232,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR036")
+					(reference "#PWR040")
 					(unit 1)
 				)
 			)
@@ -11442,7 +11532,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "4f5bae91-c0a3-46a9-bd8c-aec95f7a2fc5")
-		(property "Reference" "#PWR042"
+		(property "Reference" "#PWR046"
 			(at 214.63 138.43 0)
 			(effects
 				(font
@@ -11493,7 +11583,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR042")
+					(reference "#PWR046")
 					(unit 1)
 				)
 			)
@@ -11596,7 +11686,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "50160ddb-d4b3-477e-aa7f-b964a73dab49")
-		(property "Reference" "#PWR033"
+		(property "Reference" "#PWR035"
 			(at 196.85 132.08 0)
 			(effects
 				(font
@@ -11647,7 +11737,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR033")
+					(reference "#PWR035")
 					(unit 1)
 				)
 			)
@@ -11750,7 +11840,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "511e4778-cf7e-44ca-9c5a-49dbed939759")
-		(property "Reference" "#PWR034"
+		(property "Reference" "#PWR038"
 			(at 201.93 106.68 0)
 			(effects
 				(font
@@ -11801,7 +11891,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR034")
+					(reference "#PWR038")
 					(unit 1)
 				)
 			)
@@ -12117,7 +12207,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5561778b-1769-4e79-955c-3911006eca50")
-		(property "Reference" "#PWR038"
+		(property "Reference" "#PWR042"
 			(at 207.01 58.42 0)
 			(effects
 				(font
@@ -12168,7 +12258,7 @@
 		(instances
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR038")
+					(reference "#PWR042")
 					(unit 1)
 				)
 			)
@@ -12307,7 +12397,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 161.29 152.4 0)
+		(at 163.83 152.4 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -12316,7 +12406,7 @@
 		(fields_autoplaced yes)
 		(uuid "57859d69-6a4e-4811-b37d-f9e784c042f5")
 		(property "Reference" "#PWR029"
-			(at 161.29 158.75 0)
+			(at 163.83 158.75 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12325,7 +12415,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 161.29 157.48 0)
+			(at 163.83 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12333,7 +12423,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 161.29 152.4 0)
+			(at 163.83 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12342,7 +12432,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 161.29 152.4 0)
+			(at 163.83 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12351,7 +12441,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 161.29 152.4 0)
+			(at 163.83 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12508,7 +12598,7 @@
 	)
 	(symbol
 		(lib_id "Logic_LevelTranslator:SN74LV1T125DBV")
-		(at 142.24 142.24 0)
+		(at 137.16 142.24 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -12516,7 +12606,7 @@
 		(dnp no)
 		(uuid "5d584a91-be8b-437e-ac53-27de3b462350")
 		(property "Reference" "U3"
-			(at 145.034 135.636 0)
+			(at 139.954 135.636 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12524,7 +12614,7 @@
 			)
 		)
 		(property "Value" "SN74LV1T125DBVR"
-			(at 132.588 134.112 0)
+			(at 134.112 127.762 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12532,7 +12622,7 @@
 			)
 		)
 		(property "Footprint" "Package_TO_SOT_SMD:SOT-23-5"
-			(at 142.24 166.37 0)
+			(at 137.16 166.37 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12541,7 +12631,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/sn74lv1t125.pdf"
-			(at 142.24 163.83 0)
+			(at 137.16 163.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12550,7 +12640,7 @@
 			)
 		)
 		(property "Description" "Single Power Supply, Single Buffer Gate with 3-State Output, CMOS Logic Level Shifter Level Shifter, SOT-23-5"
-			(at 142.24 142.24 0)
+			(at 137.16 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12559,7 +12649,7 @@
 			)
 		)
 		(property "LCSC" "C473338"
-			(at 142.24 142.24 0)
+			(at 137.16 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12568,7 +12658,7 @@
 			)
 		)
 		(property "Text" ""
-			(at 142.24 142.24 0)
+			(at 137.16 142.24 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12873,7 +12963,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "691fe135-e751-4879-b284-9ade60384553")
-		(property "Reference" "C10"
+		(property "Reference" "C12"
 			(at 195.326 147.066 0)
 			(effects
 				(font
@@ -12945,7 +13035,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "C10")
+					(reference "C12")
 					(unit 1)
 				)
 			)
@@ -12961,7 +13051,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "75d0a682-16da-4458-9c34-4c878630ef97")
-		(property "Reference" "#PWR037"
+		(property "Reference" "#PWR041"
 			(at 212.09 147.32 0)
 			(effects
 				(font
@@ -13012,7 +13102,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR037")
+					(reference "#PWR041")
 					(unit 1)
 				)
 			)
@@ -13529,7 +13619,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "80b4c26f-d016-4576-8773-b76d2d41c604")
-		(property "Reference" "#PWR044"
+		(property "Reference" "#PWR048"
 			(at 260.35 124.46 0)
 			(effects
 				(font
@@ -13580,7 +13670,7 @@
 		(instances
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR044")
+					(reference "#PWR048")
 					(unit 1)
 				)
 			)
@@ -13836,7 +13926,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8d63b0af-6536-48a9-9292-eaf3c467b2ec")
-		(property "Reference" "#PWR040"
+		(property "Reference" "#PWR044"
 			(at 222.25 30.48 0)
 			(effects
 				(font
@@ -13887,7 +13977,7 @@
 		(instances
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR040")
+					(reference "#PWR044")
 					(unit 1)
 				)
 			)
@@ -14061,7 +14151,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9c09eef6-2dc1-4c3f-9c04-b6037c4fe269")
-		(property "Reference" "#PWR043"
+		(property "Reference" "#PWR047"
 			(at 220.98 140.97 0)
 			(effects
 				(font
@@ -14111,7 +14201,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR043")
+					(reference "#PWR047")
 					(unit 1)
 				)
 			)
@@ -14762,7 +14852,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "acf88f45-418a-44a7-b846-ca809007edd8")
-		(property "Reference" "#PWR041"
+		(property "Reference" "#PWR045"
 			(at 212.09 50.8 0)
 			(effects
 				(font
@@ -14813,7 +14903,7 @@
 		(instances
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR041")
+					(reference "#PWR045")
 					(unit 1)
 				)
 			)
@@ -14965,6 +15055,294 @@
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
 					(reference "R9")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 198.12 29.21 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d01")
+		(property "Reference" "C10"
+			(at 200.66 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 200.66 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 199.0852 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 198.12 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "ESP32 3.3V bypass capacitor"
+			(at 198.12 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C14663"
+			(at 198.12 29.21 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d02")
+		)
+		(pin "2"
+			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d03")
+		)
+		(instances
+			(project "dimmer_esp_v1_main"
+				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
+					(reference "C10")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:+3.3V")
+		(at 198.12 24.13 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d04")
+		(property "Reference" "#PWR036"
+			(at 198.12 27.94 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+3.3V"
+			(at 198.12 20.32 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 198.12 24.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 198.12 24.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 198.12 24.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d05")
+		)
+		(instances
+			(project "dimmer_esp_v1_main"
+				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
+					(reference "#PWR036")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 198.12 35.56 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d06")
+		(property "Reference" "#PWR037"
+			(at 198.12 41.91 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 198.12 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 198.12 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 198.12 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 198.12 35.56 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d07")
+		)
+		(instances
+			(project "dimmer_esp_v1_main"
+				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
+					(reference "#PWR037")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C")
+		(at 171.45 151.13 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d10")
+		(property "Reference" "C8"
+			(at 171.45 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 173.99 148.59 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 175.26 150.1648 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 171.45 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "WS2812B VDD bypass capacitor"
+			(at 171.45 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C14663"
+			(at 171.45 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d11")
+		)
+		(pin "2"
+			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d12")
+		)
+		(instances
+			(project "dimmer_esp_v1_main"
+				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
+					(reference "C8")
 					(unit 1)
 				)
 			)
@@ -15279,7 +15657,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d523f219-7cc9-4d12-92b0-c77a6b262626")
-		(property "Reference" "#PWR045"
+		(property "Reference" "#PWR049"
 			(at 267.97 116.84 0)
 			(effects
 				(font
@@ -15330,7 +15708,84 @@
 		(instances
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR045")
+					(reference "#PWR049")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 149.86 142.24 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "d7f04a90-1450-4dff-84e7-9aac07d910b9")
+		(property "Reference" "R20"
+			(at 149.86 135.89 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "330"
+			(at 149.86 138.43 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 149.86 144.018 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 149.86 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 149.86 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C23138"
+			(at 149.86 142.24 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "055ecf12-db0b-48e7-9884-b01d40979b08")
+		)
+		(pin "1"
+			(uuid "d1cec3f6-c818-4385-b78b-fcbff888a386")
+		)
+		(instances
+			(project ""
+				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
+					(reference "R20")
 					(unit 1)
 				)
 			)
@@ -15528,7 +15983,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "dc3b253c-d53b-4c62-9d7b-b312e2e07b50")
-		(property "Reference" "#PWR039"
+		(property "Reference" "#PWR043"
 			(at 212.09 27.94 0)
 			(effects
 				(font
@@ -15579,7 +16034,7 @@
 		(instances
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR039")
+					(reference "#PWR043")
 					(unit 1)
 				)
 			)
@@ -16031,7 +16486,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "eeaeb5aa-0bd9-4670-8f08-d5cf996d94c5")
-		(property "Reference" "#PWR035"
+		(property "Reference" "#PWR039"
 			(at 201.93 157.48 0)
 			(effects
 				(font
@@ -16081,7 +16536,7 @@
 		(instances
 			(project "dimmer_esp_v1_main"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR035")
+					(reference "#PWR039")
 					(unit 1)
 				)
 			)
@@ -16184,7 +16639,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f7c0755a-2fa3-46f3-b087-df97647c099d")
-		(property "Reference" "C8"
+		(property "Reference" "C9"
 			(at 171.45 26.67 90)
 			(effects
 				(font
@@ -16254,7 +16709,7 @@
 		(instances
 			(project ""
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "C8")
+					(reference "C9")
 					(unit 1)
 				)
 			)
@@ -16262,7 +16717,7 @@
 	)
 	(symbol
 		(lib_id "SparkFun-LED:WS2812B_5050")
-		(at 161.29 142.24 0)
+		(at 163.83 142.24 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -16270,7 +16725,7 @@
 		(dnp no)
 		(uuid "f98e7d49-0cfd-4e8a-ae7b-5f76f3baf211")
 		(property "Reference" "D6"
-			(at 170.18 146.304 90)
+			(at 170.942 144.78 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16278,7 +16733,7 @@
 			)
 		)
 		(property "Value" "LED: WS2812B_5050"
-			(at 172.466 139.446 90)
+			(at 165.1 126.746 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16286,7 +16741,7 @@
 			)
 		)
 		(property "Footprint" "LED_SMD:LED_WS2812B_PLCC4_5.0x5.0mm_P3.2mm"
-			(at 161.29 152.4 0)
+			(at 163.83 152.4 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16295,7 +16750,7 @@
 			)
 		)
 		(property "Datasheet" "https://cdn.sparkfun.com/datasheets/BreakoutBoards/WS2812B.pdf"
-			(at 161.29 154.94 0)
+			(at 163.83 154.94 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16304,7 +16759,7 @@
 			)
 		)
 		(property "Description" "RGB LED with integrated controller"
-			(at 161.29 160.02 0)
+			(at 163.83 160.02 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16313,7 +16768,7 @@
 			)
 		)
 		(property "PROD_ID" "DIO-12503"
-			(at 161.29 157.48 0)
+			(at 163.83 157.48 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16322,7 +16777,7 @@
 			)
 		)
 		(property "Text" ""
-			(at 161.29 142.24 90)
+			(at 163.83 142.24 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16331,7 +16786,7 @@
 			)
 		)
 		(property "LCSC" "C2843785"
-			(at 161.29 142.24 90)
+			(at 163.83 142.24 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16972,446 +17427,6 @@
 			(project "dimmer_esp_v1"
 				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
 					(reference "#PWR017")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(text "C11: ESP32 bypass cap"
-		(exclude_from_sim no)
-		(at 203 20 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d50")
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 208.28 27.94 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d01")
-		(property "Reference" "C11"
-			(at 210.82 27.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "0.1uF"
-			(at 210.82 30.48 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 209.2452 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 208.28 27.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "ESP32 3.3V bypass capacitor"
-			(at 208.28 27.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" "C14663"
-			(at 208.28 27.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d02")
-		)
-		(pin "2"
-			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d03")
-		)
-		(instances
-			(project "dimmer_esp_v1_main"
-				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "C11")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+3.3V")
-		(at 208.28 24.13 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d04")
-		(property "Reference" "#PWR046"
-			(at 208.28 27.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+3.3V"
-			(at 208.28 20.32 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 208.28 24.13 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 208.28 24.13 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 208.28 24.13 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d05")
-		)
-		(instances
-			(project "dimmer_esp_v1_main"
-				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR046")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 208.28 31.75 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d06")
-		(property "Reference" "#PWR047"
-			(at 208.28 38.1 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 208.28 35.56 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 208.28 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 208.28 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 208.28 31.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d07")
-		)
-		(instances
-			(project "dimmer_esp_v1_main"
-				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR047")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(text "C12: WS2812B bypass cap"
-		(exclude_from_sim no)
-		(at 170 150 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-		)
-		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d51")
-	)
-	(symbol
-		(lib_id "Device:C")
-		(at 175.26 156.21 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d10")
-		(property "Reference" "C12"
-			(at 177.8 156.21 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "0.1uF"
-			(at 177.8 158.75 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 176.2252 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 175.26 156.21 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "WS2812B VDD bypass capacitor"
-			(at 175.26 156.21 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" "C14663"
-			(at 175.26 156.21 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d11")
-		)
-		(pin "2"
-			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d12")
-		)
-		(instances
-			(project "dimmer_esp_v1_main"
-				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "C12")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+5V")
-		(at 175.26 152.4 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d13")
-		(property "Reference" "#PWR048"
-			(at 175.26 156.21 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+5V"
-			(at 175.26 148.59 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 175.26 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 175.26 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 175.26 152.4 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d14")
-		)
-		(instances
-			(project "dimmer_esp_v1_main"
-				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR048")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 175.26 160.02 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d15")
-		(property "Reference" "#PWR049"
-			(at 175.26 166.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 175.26 163.83 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 175.26 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 175.26 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 175.26 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "b1c2d3e4-f5a6-4b7c-8d9e-0f1a2b3c4d16")
-		)
-		(instances
-			(project "dimmer_esp_v1_main"
-				(path "/ddfcd425-273c-4c73-9404-db5c5faab60e"
-					(reference "#PWR049")
 					(unit 1)
 				)
 			)
