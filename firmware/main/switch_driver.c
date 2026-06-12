@@ -37,6 +37,7 @@
 
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_intr_alloc.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -260,7 +261,10 @@ static bool switch_driver_gpio_init(switch_func_pair_t *button_func_pair, uint8_
     }
     /* install gpio isr service */
     esp_err_t err;
-    err = gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+    /* Install the ISR service in IRAM so button and encoder edges are still
+       serviced while the flash cache is disabled (e.g. Zigbee flash writes).
+       All registered GPIO handlers (here and in rotary_encoder.c) are IRAM_ATTR. */
+    err = gpio_install_isr_service(ESP_INTR_FLAG_IRAM);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "gpio_install_isr_service failed: %s", esp_err_to_name(err));
         vQueueDelete(gpio_evt_queue);
