@@ -477,7 +477,10 @@ void app_main(void) {
         ESP_LOGE(TAG, "Switch driver init failed, rebooting");
         esp_restart();
     }
-    if (xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 4, NULL) != pdPASS) {
+    // Zigbee task runs the stack/radio timers; it must not be starved by the
+    // higher-priority UI tasks (button=10, LED=6, encoder=5) under a fast
+    // encoder burst, so give it priority 5 and extra stack headroom.
+    if (xTaskCreate(esp_zb_task, "Zigbee_main", 6144, NULL, 5, NULL) != pdPASS) {
         ESP_LOGE(TAG, "Failed to create Zigbee task, rebooting");
         esp_restart();
     }
