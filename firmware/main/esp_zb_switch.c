@@ -69,10 +69,18 @@ static volatile TickType_t button_press_tick = 0;
 // NOTE: callbacks that already run in stack context (esp_zb_app_signal_handler,
 // scheduler-alarm callbacks) must NOT use this -- they already hold the stack
 // and re-acquiring would deadlock.
-#define ZB_LOCKED(stmt) do {                \
-        esp_zb_lock_acquire(portMAX_DELAY); \
-        stmt;                               \
-        esp_zb_lock_release();              \
+//
+// The wait is bounded (not portMAX_DELAY) so that if the stack ever wedges
+// while holding the lock, the button/encoder tasks drop the command instead of
+// blocking forever -- a frozen UI behind drywall is worse than a lost step.
+#define ZB_STACK_LOCK_TIMEOUT_MS 2000
+#define ZB_LOCKED(stmt) do {                                                  \
+        if (esp_zb_lock_acquire(pdMS_TO_TICKS(ZB_STACK_LOCK_TIMEOUT_MS))) {   \
+            stmt;                                                             \
+            esp_zb_lock_release();                                           \
+        } else {                                                             \
+            ESP_LOGW(TAG, "Zigbee stack lock timeout, dropped: %s", #stmt);  \
+        }                                                                     \
     } while (0)
 
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
