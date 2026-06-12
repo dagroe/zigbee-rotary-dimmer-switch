@@ -29,3 +29,11 @@ CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
 # end of Zboss
 # end of Component config
+
+#
+# Reliability for unattended wall install
+#
+# Reboot (rather than only warn) if a task starves the idle task / hangs, so the
+# device self-recovers from a software wedge instead of sitting frozen.
+CONFIG_ESP_TASK_WDT_PANIC=y
+# end of Reliability
