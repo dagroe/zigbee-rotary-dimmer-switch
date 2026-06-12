@@ -72,25 +72,6 @@ static void IRAM_ATTR gpio_isr_handler(void *arg)
 }
 
 /**
- * @brief Enable GPIO (switchs refer to) isr
- *
- * @param enabled      enable isr if true.
- */
-static void switch_driver_gpios_intr_enabled(bool enabled)
-{
-    if (switch_func_pair == NULL || switch_num == 0) {
-        return;
-    }
-    for (int i = 0; i < switch_num; ++i) {
-        if (enabled) {
-            gpio_intr_enable((switch_func_pair + i)->pin);
-        } else {
-            gpio_intr_disable((switch_func_pair + i)->pin);
-        }
-    }
-}
-
-/**
  * @brief Tasks for checking the button event and debounce the switch state
  *
  * @param arg      Unused value.
@@ -118,7 +99,10 @@ static void switch_driver_button_detected(void *arg)
             ESP_LOGI(TAG, "switch_driver_button_detected");
 #endif
             io_num =  button_func_pair.pin;
-            switch_driver_gpios_intr_enabled(false);
+            /* Mask only this button while we debounce it, so the other button
+               stays responsive (e.g. toggle still works during a 5s commission
+               hold). */
+            gpio_intr_disable(io_num);
             evt_flag = true;
             // Initialize debounce baseline from current level to avoid false transitions
             // last_value = gpio_get_level(io_num);
@@ -219,7 +203,7 @@ static void switch_driver_button_detected(void *arg)
                 break;
             }
             if (switch_state == SWITCH_IDLE) {
-                switch_driver_gpios_intr_enabled(true);
+                gpio_intr_enable(io_num);
                 evt_flag = false;
                 break;
             }
