@@ -46,7 +46,7 @@ void configure_device(void)
     esp_zb_on_off_switch_cluster_cfg_t on_off_switch_cfg;
     on_off_switch_cfg.switch_type = ESP_ZB_ZCL_ON_OFF_SWITCH_CONFIGURATION_SWITCH_TYPE_MULTIFUNCTION;
     on_off_switch_cfg.switch_action = ESP_ZB_ZCL_ON_OFF_SWITCH_CONFIGURATION_SWITCH_ACTIONS_TOGGLE;
-    esp_zb_attribute_list_t *esp_zb_on_off_switch_cluster = esp_zb_on_off_switch_cfg_cluster_create(&on_off_switch_cfg);
+    esp_zb_attribute_list_t *esp_zb_on_off_switch_cluster = esp_zb_on_off_switch_config_cluster_create(&on_off_switch_cfg);
 
     // level control cluster
     esp_zb_level_cluster_cfg_t level_control_cfg;
@@ -78,6 +78,12 @@ void configure_device(void)
 
     esp_zb_ep_list_t *esp_zb_ep_list = esp_zb_ep_list_create();
     /* add created endpoint (cluster_list) to endpoint list */
-    esp_zb_ep_list_add_ep(esp_zb_ep_list, esp_zb_cluster_list, HA_ONOFF_SWITCH_ENDPOINT, ESP_ZB_AF_HA_PROFILE_ID, ESP_ZB_HA_ON_OFF_SWITCH_DEVICE_ID);
+    esp_zb_endpoint_config_t endpoint_config = {
+        .endpoint = HA_ONOFF_SWITCH_ENDPOINT,
+        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+        .app_device_id = ESP_ZB_HA_ON_OFF_SWITCH_DEVICE_ID,
+        .app_device_version = 0,
+    };
+    esp_zb_ep_list_add_ep(esp_zb_ep_list, esp_zb_cluster_list, endpoint_config);
     esp_zb_device_register(esp_zb_ep_list);
 }

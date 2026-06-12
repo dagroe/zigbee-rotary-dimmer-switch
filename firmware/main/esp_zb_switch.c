@@ -58,6 +58,22 @@ static volatile TickType_t button_press_tick = 0;
 #define ZCL_STEP_MODE_UP   0x00
 #define ZCL_STEP_MODE_DOWN 0x01
 
+// The ZBOSS stack is single-threaded and not reentrant: it runs on the Zigbee
+// main-loop task (esp_zb_task). Any esp_zb_* call issued from another task --
+// here the button-detect task (esp_zb_buttons_handler) and the encoder task --
+// races the stack's internal critical sections. That corrupts FreeRTOS's
+// critical-nesting counter and trips "assert failed: vPortExitCritical
+// (port_uxCriticalNesting[0] > 0)" under bursts of commands (e.g. fast rotary
+// turns). Guard every cross-task stack call with the stack lock.
+// NOTE: callbacks that already run in stack context (esp_zb_app_signal_handler,
+// scheduler-alarm callbacks) must NOT use this -- they already hold the stack
+// and re-acquiring would deadlock.
+#define ZB_LOCKED(stmt) do {                \
+        esp_zb_lock_acquire(portMAX_DELAY); \
+        stmt;                               \
+        esp_zb_lock_release();              \
+    } while (0)
+
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
 
 static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_state_t state)
@@ -97,7 +113,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     #ifdef DEBUG_ENABLED
                     ESP_EARLY_LOGI(TAG, "Send 'on_off toggle' command");
                     #endif
-                    esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req);
+                    ZB_LOCKED(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
                 } else {
                     #ifdef DEBUG_ENABLED
                     ESP_EARLY_LOGI(TAG, "Toggle suppressed - encoder rotated while pressed");
@@ -123,7 +139,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     #ifdef DEBUG_ENABLED
                     ESP_EARLY_LOGI(TAG, "Send 'on_off off' command");
                     #endif
-                    esp_zb_zcl_on_off_cmd_req(&off_cmd_req);
+                    ZB_LOCKED(esp_zb_zcl_on_off_cmd_req(&off_cmd_req));
                 } else {
                     #ifdef DEBUG_ENABLED
                     ESP_EARLY_LOGI(TAG, "Off suppressed - encoder rotated while pressed");
@@ -176,7 +192,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
             case SWITCH_RELEASE_DETECTED:
                 // Short press: trigger network steering (rejoin/find new network)
                 ESP_LOGI(TAG, "Commission button: start network steering");
-                esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
+                ZB_LOCKED(esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING));
                 {
                     led_state_t led_state = LED_COLOR_STATE_BLINK_ONCE_YELLOW;
                     xQueueSend(led_evt_queue, &led_state, 0);
@@ -189,7 +205,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     led_state_t led_state = LED_COLOR_STATE_BLINK_RED;
                     xQueueSend(led_evt_queue, &led_state, 0);
                 }
-                esp_zb_factory_reset();
+                ZB_LOCKED(esp_zb_factory_reset());
                 break;
             default:
                 break;
@@ -384,7 +400,7 @@ static void encoder_task(void *pvParameters) {
                     #ifdef DEBUG_ENABLED
                     ESP_EARLY_LOGI(TAG, "Send 'color step' command (button held)");
                     #endif
-                    esp_zb_zcl_color_step_hue_cmd_req(&cmd_req);
+                    ZB_LOCKED(esp_zb_zcl_color_step_hue_cmd_req(&cmd_req));
 
                     led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_WHITE;
                     xQueueSend(led_evt_queue, &led_state_success, 0);
@@ -406,7 +422,7 @@ static void encoder_task(void *pvParameters) {
                 #ifdef DEBUG_ENABLED
                 ESP_EARLY_LOGI(TAG, "Send 'level step' command");
                 #endif
-                esp_zb_zcl_level_step_cmd_req(&cmd_req);
+                ZB_LOCKED(esp_zb_zcl_level_step_cmd_req(&cmd_req));
 
                 led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_WHITE;
                 xQueueSend(led_evt_queue, &led_state_success, 0);

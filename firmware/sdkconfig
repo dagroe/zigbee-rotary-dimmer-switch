@@ -2229,25 +2229,16 @@ CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
 # CONFIG_ZB_ZED is not set
 # CONFIG_ZB_ZGPD is not set
-# CONFIG_ZB_RCP is not set
 CONFIG_ZB_RADIO_NATIVE=y
-# CONFIG_ZB_RADIO_MACSPLIT_UART is not set
+# CONFIG_ZB_RADIO_SPINEL_UART is not set
 
 #
 # Zigbee Example
 #
-# CONFIG_ZB_R22_ENABLE is not set
 CONFIG_ZB_GP_ENABLED=y
-# CONFIG_ZB_SNIFFER_ENABLE is not set
 # end of Zigbee Example
 
-#
-# Zigbee trace log option
-#
-# CONFIG_ESP_ZB_TRACE_ENABLE is not set
-CONFIG_ZB_TRACE_LEVEL=-1
-CONFIG_ZB_TRACE_MASK=0x0
-# end of Zigbee trace log option
+# CONFIG_ZB_DEBUG_MODE is not set
 # end of Zigbee
 # end of Component config
 
