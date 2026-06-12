@@ -17,6 +17,7 @@
 #include "string.h"
 
 #include "esp_log.h"
+#include "esp_system.h"
 #include "nvs_flash.h"
 #include "ha/esp_zigbee_ha_standard.h"
 
@@ -441,8 +442,10 @@ void app_main(void) {
     // create queue to pass LED state events
     led_evt_queue = xQueueCreate(5, sizeof(led_state_t));
     if ( led_evt_queue == 0) {
-        ESP_LOGE(TAG, "Queue for LED events was not created");
-        return;
+        // Wall-installed device: a half-initialized state is unrecoverable and
+        // there is no one to power-cycle it, so reboot and let init retry.
+        ESP_LOGE(TAG, "Queue for LED events was not created, rebooting");
+        esp_restart();
     }
 
     // create light strip
@@ -451,9 +454,15 @@ void app_main(void) {
     xQueueSend(led_evt_queue, &led_state_init, 0);
 
     if (!switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair), esp_zb_buttons_handler)) {
-        ESP_LOGE(TAG, "Switch driver init failed");
-        return;
+        ESP_LOGE(TAG, "Switch driver init failed, rebooting");
+        esp_restart();
     }
-    xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 4, NULL);
-    xTaskCreate(encoder_task, "Encoder_main", 4096, NULL, 5, NULL);
+    if (xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 4, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create Zigbee task, rebooting");
+        esp_restart();
+    }
+    if (xTaskCreate(encoder_task, "Encoder_main", 4096, NULL, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create encoder task, rebooting");
+        esp_restart();
+    }
 }
