@@ -92,7 +92,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 button_press_tick = xTaskGetTickCount();
                 taskEXIT_CRITICAL(&s_button_encoder_mux);
                 #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Button down, encoder_button_down=true");
+                ESP_LOGI(TAG, "Button down, encoder_button_down=true");
                 #endif
                 break;
 
@@ -111,12 +111,12 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
                     toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
                     #ifdef DEBUG_ENABLED
-                    ESP_EARLY_LOGI(TAG, "Send 'on_off toggle' command");
+                    ESP_LOGI(TAG, "Send 'on_off toggle' command");
                     #endif
                     ZB_LOCKED(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
                 } else {
                     #ifdef DEBUG_ENABLED
-                    ESP_EARLY_LOGI(TAG, "Toggle suppressed - encoder rotated while pressed");
+                    ESP_LOGI(TAG, "Toggle suppressed - encoder rotated while pressed");
                     #endif
                 }
                 break;
@@ -137,12 +137,12 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     off_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
                     off_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_OFF_ID;
                     #ifdef DEBUG_ENABLED
-                    ESP_EARLY_LOGI(TAG, "Send 'on_off off' command");
+                    ESP_LOGI(TAG, "Send 'on_off off' command");
                     #endif
                     ZB_LOCKED(esp_zb_zcl_on_off_cmd_req(&off_cmd_req));
                 } else {
                     #ifdef DEBUG_ENABLED
-                    ESP_EARLY_LOGI(TAG, "Off suppressed - encoder rotated while pressed");
+                    ESP_LOGI(TAG, "Off suppressed - encoder rotated while pressed");
                     #endif
                 }
                 break;
@@ -151,14 +151,14 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
             case SWITCH_LONG_PRESS_DETECTED:
                 // Long press detected (button still held): no action needed, state stays
                 #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Long press detected, button still held");
+                ESP_LOGI(TAG, "Long press detected, button still held");
                 #endif
                 break;
 
             case SWITCH_HOLD_DETECTED:
                 // Hold detected (button still held): no action needed, state stays
                 #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Hold detected, button still held");
+                ESP_LOGI(TAG, "Hold detected, button still held");
                 #endif
                 break;
 
@@ -169,7 +169,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 encoder_rotated_while_pressed = false;
                 taskEXIT_CRITICAL(&s_button_encoder_mux);
                 #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Hold release, encoder_button_down=false");
+                ESP_LOGI(TAG, "Hold release, encoder_button_down=false");
                 #endif
                 break;
 
@@ -180,7 +180,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 encoder_rotated_while_pressed = false;
                 taskEXIT_CRITICAL(&s_button_encoder_mux);
                 #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Unknown state %d, clearing button state", state);
+                ESP_LOGI(TAG, "Unknown state %d, clearing button state", state);
                 #endif
                 break;
         }
@@ -223,7 +223,6 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
     uint32_t *p_sg_p       = signal_struct->p_app_signal;
     esp_err_t err_status = signal_struct->esp_err_status;
     esp_zb_app_signal_type_t sig_type = *p_sg_p;
-    esp_zb_zdo_signal_device_annce_params_t *dev_annce_params = NULL;
 
     #ifdef DEBUG_ENABLED
     ESP_LOGI(TAG, "ZDO signal: %s (0x%x), status: %s", esp_zb_zdo_signal_to_string(sig_type), sig_type,
@@ -306,7 +305,7 @@ static void esp_zb_task(void *pvParameters)
     configure_device();
 
     ESP_ERROR_CHECK(esp_zb_start(false));
-    esp_zb_main_loop_iteration();
+    esp_zb_stack_main_loop();
 }
 
 
@@ -398,7 +397,7 @@ static void encoder_task(void *pvParameters) {
                     cmd_req.step_size = 5;
                     cmd_req.transition_time = 1;
                     #ifdef DEBUG_ENABLED
-                    ESP_EARLY_LOGI(TAG, "Send 'color step' command (button held)");
+                    ESP_LOGI(TAG, "Send 'color step' command (button held)");
                     #endif
                     ZB_LOCKED(esp_zb_zcl_color_step_hue_cmd_req(&cmd_req));
 
@@ -420,7 +419,7 @@ static void encoder_task(void *pvParameters) {
                 cmd_req.step_size = 15;
                 cmd_req.transition_time = 1;
                 #ifdef DEBUG_ENABLED
-                ESP_EARLY_LOGI(TAG, "Send 'level step' command");
+                ESP_LOGI(TAG, "Send 'level step' command");
                 #endif
                 ZB_LOCKED(esp_zb_zcl_level_step_cmd_req(&cmd_req));
 
