@@ -24,22 +24,16 @@ its file version must be **greater** than the running `OTA_UPGRADE_FILE_VERSION`
 1. Bump `OTA_UPGRADE_FILE_VERSION` in `main/ota_driver.h` (e.g. `0x01000000` →
    `0x01000001`).
 2. Build normally: `idf.py build`. This produces `build/light_switch.bin`.
-3. Wrap that `.bin` in a Zigbee `.ota` container whose header carries the **same**
-   manufacturer code / image type and the **new** version. Use the esp-zigbee-sdk
-   image builder (run with `--help` to confirm flags for your version):
+3. Wrap that `.bin` in a Zigbee `.ota` container with `tools/make_ota.py`:
 
    ```
-   python <esp-zigbee-sdk>/tools/image_builder/image_builder_tool.py \
-       --create light_switch.ota \
-       --manuf-id 0x131B \
-       --image-type 0x1010 \
-       --version 0x01000001 \
-       --tag-id 0x0000 \
-       build/light_switch.bin
+   python tools/make_ota.py --in build/light_switch.bin --out dimmer_v2.ota \
+       --manuf 0x131B --image-type 0x1010 --version 0x01000001
    ```
 
-   The header version here MUST match the `OTA_UPGRADE_FILE_VERSION` you compiled
-   into that same build.
+   The `--manuf`/`--image-type`/`--version` MUST match the `OTA_UPGRADE_*` defines
+   you compiled into that same build. The script prints the `fileVersion`,
+   `fileSize`, and `sha512` to drop into the z2m index below.
 
 ## Serving it from zigbee2mqtt
 
@@ -52,20 +46,22 @@ ota:
   zigbee_ota_override_index_location: my_ota_index.json
 ```
 
-`my_ota_index.json` (numbers are decimal):
+`my_ota_index.json` (decimal; use the values `make_ota.py` printed):
 ```json
 [
   {
     "fileVersion": 16777217,
     "manufacturerCode": 4891,
     "imageType": 4112,
-    "url": "file:///opt/zigbee2mqtt/data/ota/light_switch.ota"
+    "fileSize": 1100000,
+    "sha512": "<from make_ota.py>",
+    "url": "/opt/zigbee2mqtt/data/ota/dimmer_v2.ota"
   }
 ]
 ```
 
 - `4891` = `0x131B`, `4112` = `0x1010`, `16777217` = `0x01000001`.
-- Put `light_switch.ota` at the `url` path.
+- Put `dimmer_v2.ota` at the `url` path; set `fileSize`/`sha512` from the script.
 - Restart z2m, then in the device's page use **OTA → Check for update / Update**.
   (ZHA: enable the OTA provider / advanced OTA and trigger an update similarly.)
 
