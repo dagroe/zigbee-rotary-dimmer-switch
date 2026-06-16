@@ -26,6 +26,7 @@
 #include "switch_driver.h"
 #include "rotary_encoder.h"
 #include "led_driver.h"
+#include "ota_driver.h"
 
 #if defined ZB_ED_ROLE
 #error Define ZB_COORDINATOR_ROLE in idf.py menuconfig to compile light switch source code.
@@ -320,12 +321,29 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
     }
 }
 
+/* Dispatcher for Zigbee core action callbacks. Currently only OTA needs one. */
+static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id, const void *message)
+{
+    switch (callback_id) {
+    case ESP_ZB_CORE_OTA_UPGRADE_VALUE_CB_ID:
+        return ota_handle_value((const esp_zb_zcl_ota_upgrade_value_message_t *)message);
+    default:
+        #ifdef DEBUG_ENABLED
+        ESP_LOGI(TAG, "Unhandled Zigbee action callback 0x%x", callback_id);
+        #endif
+        return ESP_OK;
+    }
+}
+
 static void esp_zb_task(void *pvParameters)
 {
     /* initialize Zigbee stack with Zigbee end-device config */
     configure_device();
 
+    esp_zb_core_action_handler_register(zb_action_handler);
+
     ESP_ERROR_CHECK(esp_zb_start(false));
+    ota_client_start(HA_ONOFF_SWITCH_ENDPOINT);
     esp_zb_stack_main_loop();
 }
 

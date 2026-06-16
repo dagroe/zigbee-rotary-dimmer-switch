@@ -2,6 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "ha/esp_zigbee_ha_standard.h"
 #include "device_config.h"
+#include "ota_driver.h"
 
 char modelid[] = { 12, 'E','S','P','_','D','I','M','M','E','R','_','1' };
 char manufname[] = { 14, 'D','G',' ','E','l','e','c','t','r','o','n','i','c','s' };
@@ -75,6 +76,9 @@ void configure_device(void)
     esp_zb_cluster_list_add_on_off_switch_config_cluster(esp_zb_cluster_list, esp_zb_on_off_switch_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
     esp_zb_cluster_list_add_level_cluster(esp_zb_cluster_list, esp_zb_level_control_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
     esp_zb_cluster_list_add_color_control_cluster(esp_zb_cluster_list, esp_zb_color_control_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
+
+    /* OTA Upgrade (client) cluster: lets any standard coordinator push firmware. */
+    ESP_ERROR_CHECK(ota_add_cluster(esp_zb_cluster_list));
 
     esp_zb_ep_list_t *esp_zb_ep_list = esp_zb_ep_list_create();
     /* add created endpoint (cluster_list) to endpoint list */

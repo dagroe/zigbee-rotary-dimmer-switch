@@ -5,6 +5,7 @@ idf_component_register(
     "switch_driver.c"
     "led_driver.c"
     "rotary_encoder.c"
-    REQUIRES log driver nvs_flash esp_timer
+    "ota_driver.c"
+    REQUIRES log driver nvs_flash esp_timer app_update esp_system
     INCLUDE_DIRS "."
 )
