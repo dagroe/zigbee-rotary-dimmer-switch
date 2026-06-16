@@ -13,7 +13,10 @@ extern "C" {
 #define LED_GPIO GPIO_NUM_1
 
 /* Button config ===================================================================== */
-#define GPIO_INPUT_COMMISSION_SWITCH  GPIO_NUM_9
+/* Moved off GPIO9 (a strapping/boot pin): holding it at power-up forced serial
+   download mode and the app would not start. GPIO23 is a plain, non-strapping
+   GPIO. Wiring is unchanged: button to GND, external pull-up to 3.3V, active-low. */
+#define GPIO_INPUT_COMMISSION_SWITCH  GPIO_NUM_23
 
 /* Encoder config ==================================================================== */
 #define GPIO_INPUT_IO_TOGGLE_SWITCH  GPIO_NUM_20

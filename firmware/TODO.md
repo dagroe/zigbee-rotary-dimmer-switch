@@ -5,12 +5,12 @@ Items are roughly in priority order.
 
 ## Hardware-blocked (needs next PCB revision)
 
-- [ ] **Move the commission button off GPIO9.** GPIO9 is an ESP32-C6
-  strapping/boot pin: if it is held low at power-up the chip enters serial
-  download mode and the application never starts. After a power outage a
-  stuck/pressed commission button would leave the dimmer dark. Kept on GPIO9
-  for now because boards are already fabricated; reassign to a non-strapping
-  GPIO in the next hardware revision. (`device_config.h: GPIO_INPUT_COMMISSION_SWITCH`)
+- [ ] **Move the relay driver off GPIO15 (D15).** GPIO15 is an ESP32-C6
+  strapping pin, so the relay-driver net is sampled at boot and the relay state
+  is indeterminate from power-on until firmware initializes the pin. Not driven
+  by current firmware, so harmless today, but move to a plain GPIO (GPIO2 or
+  GPIO3 recommended — keeps GPIO4/GPIO5 free for external JTAG) before adding
+  local relay control. (schematic net D15 → Q1 base)
 
 ## Needs design decision / larger change
 
@@ -40,6 +40,7 @@ Items are roughly in priority order.
 
 ## Done (wall-install review, this branch)
 
+- [x] Move commission button off strapping pin GPIO9 → GPIO23 (board rewired + firmware)
 - [x] Lock cross-task Zigbee stack calls (fixes vPortExitCritical freeze)
 - [x] Reboot on critical init failure instead of hanging
 - [x] Bound the Zigbee stack-lock wait so UI tasks can't wedge
