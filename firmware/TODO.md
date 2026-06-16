@@ -5,6 +5,16 @@ Items are roughly in priority order.
 
 ## Smaller follow-ups
 
+- [ ] **Re-add network-loss self-heal, safely.** A first attempt (re-steer on
+  ESP_ZB_ZDO_SIGNAL_LEAVE / NO_ACTIVE_LINKS_LEFT) was reverted: it raced the
+  stack's own commissioning/leave state machine — it broke initial joins
+  (leave-with-rejoin during commissioning) and asserted in `zdo_app.c` during a
+  coordinator-forced leave-reset while steering was retrying. The stack already
+  auto-rejoins routers on transient loss. If re-added, prefer a clean
+  `esp_restart()` on a RESET-type leave (let the device come up factory-new)
+  rather than calling commissioning APIs from the leave handler, and test
+  against a coordinator that actively removes the device.
+
 - [ ] **Suppress commands when not joined to a network.** The encoder/button
   paths call `esp_zb_zcl_*_cmd_req` regardless of join state. Cheap to guard
   with a "joined" flag (set on steering success, cleared on leave) — also lets
@@ -25,7 +35,6 @@ Items are roughly in priority order.
 - [x] Reboot on critical init failure instead of hanging
 - [x] Bound the Zigbee stack-lock wait so UI tasks can't wedge
 - [x] Enable task-watchdog panic for self-recovery on hang
-- [x] Self-heal on network loss (re-steer + LED indication)
 - [x] Raise Zigbee task priority/stack
 - [x] Keep GPIO ISRs in IRAM (no dropped edges during flash writes)
 - [x] Debounce only the active button's interrupt

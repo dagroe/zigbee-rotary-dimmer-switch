@@ -296,41 +296,15 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
          * isn't rolled back. No-op unless this boot is a freshly-OTA'd image. */
         ota_confirm_running_image();
         } else {
-            ESP_LOGW(TAG, "Network steering was not successful (status: %s), retrying in 1s", esp_err_to_name(err_status));
-            esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
+            ESP_LOGW(TAG, "Network steering was not successful (status: %s), retrying in 3s", esp_err_to_name(err_status));
+            esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_NETWORK_STEERING, 3000);
         }
         break;
-    case ESP_ZB_ZDO_SIGNAL_LEAVE: {
-        // A leave-with-REJOIN is a normal part of commissioning (and of the
-        // stack's own rejoin logic) -- the stack rejoins itself, so we must NOT
-        // touch the BDB state machine or we corrupt the in-progress join. Only a
-        // leave-with-RESET (the device was removed from the network) warrants us
-        // restarting steering, and even then we defer it so it can't collide with
-        // an operation already running.
-        esp_zb_zdo_signal_leave_params_t *leave_params =
-            (esp_zb_zdo_signal_leave_params_t *)esp_zb_app_signal_get_params(p_sg_p);
-        if (leave_params && leave_params->leave_type == ESP_ZB_NWK_LEAVE_TYPE_REJOIN) {
-            ESP_LOGW(TAG, "Network leave (rejoin) - stack will rejoin on its own");
-            break;
-        }
-        ESP_LOGW(TAG, "Network leave (reset) - will restart steering");
-        led_state_t led_state_lost = LED_COLOR_STATE_WAITING_YELLOW_BLINK;
-        xQueueSend(led_evt_queue, &led_state_lost, 0);
-        esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb,
-                               ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
-        break;
-    }
-    case ESP_ZB_NWK_SIGNAL_NO_ACTIVE_LINKS_LEFT:
-        // Lost all links (parent/coordinator gone). Indicate and re-steer, but
-        // deferred so it can't collide with an in-progress operation.
-        ESP_LOGW(TAG, "No active links left - restarting network steering");
-        {
-            led_state_t led_state_lost = LED_COLOR_STATE_WAITING_YELLOW_BLINK;
-            xQueueSend(led_evt_queue, &led_state_lost, 0);
-        }
-        esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb,
-                               ESP_ZB_BDB_MODE_NETWORK_STEERING, 1000);
-        break;
+    /* NOTE: no ESP_ZB_ZDO_SIGNAL_LEAVE / NO_ACTIVE_LINKS_LEFT self-heal here.
+     * Re-steering from these handlers raced the stack's own leave/reset and
+     * commissioning state machine (corrupted joins; asserted in zdo_app.c during
+     * a forced leave-reset). The stack auto-rejoins routers on transient loss.
+     * See firmware/TODO.md for re-implementing this safely (reboot-on-reset). */
     // case ESP_ZB_NWK_SIGNAL_PERMIT_JOIN_STATUS:
     //     if (err_status == ESP_OK) {
     //         if (*(uint8_t *)esp_zb_app_signal_get_params(p_sg_p)) {
