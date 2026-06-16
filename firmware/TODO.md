@@ -5,18 +5,15 @@ Items are roughly in priority order.
 
 ## Needs design decision / larger change
 
-- [ ] **Add OTA firmware update.** Once installed in a wall the only way to
-  update otherwise is to physically extract the unit and reflash over UART.
+- [ ] **Enable OTA rollback.** OTA download/apply is implemented (standard ZCL
+  OTA Upgrade client — see `docs/OTA.md`); what remains is auto-revert of a bad
+  image. Turn on `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE` and gate the existing
+  `esp_ota_mark_app_valid_cancel_rollback()` call (in `ota_client_start`) behind
+  a real health check — ideally "marked valid only once the device has rejoined
+  the network" — otherwise a device that boots but can't join will roll back.
   - [x] Confirmed module flash is 4MB; set `CONFIG_ESPTOOLPY_FLASHSIZE_4MB`.
-  - [x] Dual-OTA partition layout (`ota_0`/`ota_1` 1.5MB each + `otadata`) in
-    `partitions.csv`.
-  - [ ] Add an update path (Zigbee OTA cluster preferred) — the actual transport
-    still needs implementing + an OTA server on the coordinator side.
-  - [ ] Enable `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE` so a bad image
-    auto-reverts. Requires a firmware health check that calls
-    `esp_ota_mark_app_valid_cancel_rollback()` once the device is up (and
-    ideally joined), otherwise every boot rolls back. Do this together with the
-    update path.
+  - [x] Dual-OTA partition layout (`ota_0`/`ota_1` 1.5MB each + `otadata`).
+  - [x] OTA Upgrade client cluster + image download/apply (`ota_driver.c`).
 
 ## Smaller follow-ups
 
