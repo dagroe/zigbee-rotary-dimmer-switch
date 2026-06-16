@@ -1,7 +1,14 @@
-# Name,   Type, SubType, Offset,  Size, Flags
-# Note: if you have increased the bootloader size, make sure to update the offsets to avoid overlap
-nvs,        data, nvs,      0x9000,  0x6000,
-phy_init,   data, phy,      0xf000,  0x1000,
-factory,    app,  factory,  0x10000, 900K,
-zb_storage, data, fat,      0xf1000, 16K,
-zb_fct,     data, fat,      0xf5000, 1K,
+# Name,     Type, SubType,  Offset,    Size,     Flags
+# 4MB flash, dual-OTA layout. Two 1.5MB app slots (ota_0/ota_1) allow updating
+# firmware in the field and reverting a bad image. otadata records the active
+# slot. zb_storage/zb_fct hold the Zigbee (zboss) NVRAM and must keep these exact
+# labels. App partitions are 64K-aligned; offsets are explicit to keep them so.
+# NOTE: this layout differs from the old single-factory table -- a full erase is
+# required when reflashing, and the device will need to re-pair (zb_storage moved).
+nvs,        data, nvs,      0x9000,    0x4000,
+otadata,    data, ota,      0xd000,    0x2000,
+phy_init,   data, phy,      0xf000,    0x1000,
+ota_0,      app,  ota_0,    0x10000,   0x180000,
+ota_1,      app,  ota_1,    0x190000,  0x180000,
+zb_storage, data, fat,      0x310000,  16K,
+zb_fct,     data, fat,      0x314000,  1K,

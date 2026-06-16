@@ -5,15 +5,18 @@ Items are roughly in priority order.
 
 ## Needs design decision / larger change
 
-- [ ] **Add OTA firmware update.** The partition table has a single `factory`
-  app and no OTA slots, and flash is configured as 2MB
-  (`CONFIG_ESPTOOLPY_FLASHSIZE_2MB`). Once installed in a wall the only way to
-  update is to physically extract the unit and reflash over UART.
-  - First confirm the actual module flash size (C6 modules are commonly 4MB —
-    fix the flash-size config if so).
-  - Move to a dual-OTA partition layout (`ota_0`/`ota_1` + `otadata`).
-  - Add an update path (Zigbee OTA cluster preferred).
-  - Enable `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE` so a bad image auto-reverts.
+- [ ] **Add OTA firmware update.** Once installed in a wall the only way to
+  update otherwise is to physically extract the unit and reflash over UART.
+  - [x] Confirmed module flash is 4MB; set `CONFIG_ESPTOOLPY_FLASHSIZE_4MB`.
+  - [x] Dual-OTA partition layout (`ota_0`/`ota_1` 1.5MB each + `otadata`) in
+    `partitions.csv`.
+  - [ ] Add an update path (Zigbee OTA cluster preferred) — the actual transport
+    still needs implementing + an OTA server on the coordinator side.
+  - [ ] Enable `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE` so a bad image
+    auto-reverts. Requires a firmware health check that calls
+    `esp_ota_mark_app_valid_cancel_rollback()` once the device is up (and
+    ideally joined), otherwise every boot rolls back. Do this together with the
+    update path.
 
 ## Smaller follow-ups
 
