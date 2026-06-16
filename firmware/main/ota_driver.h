@@ -35,11 +35,19 @@ extern "C" {
 esp_err_t ota_add_cluster(esp_zb_cluster_list_t *cluster_list);
 
 /**
- * @brief Start the OTA client on @p endpoint: confirms the running image as
- *        valid (for rollback) and sets the periodic image-query interval.
- *        Call once, after esp_zb_start().
+ * @brief Start the OTA client on @p endpoint: sets the periodic image-query
+ *        interval. Call once, after esp_zb_start().
  */
 void ota_client_start(uint8_t endpoint);
+
+/**
+ * @brief Health check for OTA rollback. Call after the device has rejoined the
+ *        network. If the running image is a freshly-OTA'd one awaiting
+ *        verification, this confirms it so the bootloader keeps it; otherwise a
+ *        crash/wedge before this point rolls back to the previous image. No-op
+ *        for normally-booted images.
+ */
+void ota_confirm_running_image(void);
 
 /**
  * @brief Handle ESP_ZB_CORE_OTA_UPGRADE_VALUE_CB_ID. Writes the downloaded image

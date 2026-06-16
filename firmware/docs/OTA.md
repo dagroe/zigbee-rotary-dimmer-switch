@@ -69,13 +69,25 @@ ota:
 - Restart z2m, then in the device's page use **OTA → Check for update / Update**.
   (ZHA: enable the OTA provider / advanced OTA and trigger an update similarly.)
 
+## Rollback (auto-revert of a bad update)
+
+App-rollback is enabled (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`). A freshly
+OTA'd image boots in *pending-verify* state and is only confirmed once the device
+**rejoins the network** (`ota_confirm_running_image()` from the steering-success
+signal). If the new image instead crashes or wedges before rejoining, the task
+watchdog reboots it and the bootloader reverts to the previous working image. So
+an update that bricks Zigbee self-heals without a site visit.
+
+Implication for releases: the new firmware must be able to join the network, or
+it will be rolled back. A normally-booted (UART-flashed) image is never in
+pending-verify, so this is a no-op outside of OTA.
+
 ## First-time / verification notes
 
-- The running image is marked valid on boot (`esp_ota_mark_app_valid_cancel_rollback`).
-  App-rollback is **not yet enabled** in sdkconfig — see `firmware/TODO.md`. Enable
-  it only together with a health check, or every boot will roll back.
 - On first OTA, watch the `OTA` log tag: `download started`, periodic writes, then
-  `OTA complete (... bytes). Rebooting`. After reboot the device rejoins and
-  reports the new `fileVersion`.
+  `OTA complete (... bytes). Rebooting`. After reboot the device rejoins, logs
+  `New OTA image confirmed healthy`, and reports the new `fileVersion`.
+- To test rollback: build an image that deliberately fails to join, OTA it, and
+  confirm the device reverts to the previous version after the watchdog reboot.
 - The two app slots are `ota_0`/`ota_1` (1.5 MB each) from the dual-OTA partition
   table; an image must fit in one slot.

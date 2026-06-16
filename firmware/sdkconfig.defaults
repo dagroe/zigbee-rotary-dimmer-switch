@@ -43,4 +43,8 @@ CONFIG_ZB_ZCZR=y
 # Reboot (rather than only warn) if a task starves the idle task / hangs, so the
 # device self-recovers from a software wedge instead of sitting frozen.
 CONFIG_ESP_TASK_WDT_PANIC=y
+# Boot a freshly OTA'd image in pending-verify state; firmware confirms it only
+# after rejoining the network, otherwise the bootloader rolls back to the
+# previous working image on the next reboot.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 # end of Reliability

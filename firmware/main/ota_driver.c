@@ -99,16 +99,30 @@ esp_err_t ota_add_cluster(esp_zb_cluster_list_t *cluster_list)
 
 void ota_client_start(uint8_t endpoint)
 {
-    /* Confirm this image so the bootloader doesn't roll it back. Harmless when
-     * rollback is disabled; required once CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE
-     * is turned on. */
-    esp_err_t err = esp_ota_mark_app_valid_cancel_rollback();
-    if (err != ESP_OK && err != ESP_ERR_NOT_SUPPORTED) {
-        ESP_LOGW(TAG, "mark_app_valid: %s", esp_err_to_name(err));
-    }
     esp_zb_ota_upgrade_client_query_interval_set(endpoint, OTA_UPGRADE_QUERY_INTERVAL_MIN);
     ESP_LOGI(TAG, "OTA client started on ep %u, querying every %d min (running v0x%08x)",
              endpoint, OTA_UPGRADE_QUERY_INTERVAL_MIN, (unsigned)OTA_UPGRADE_FILE_VERSION);
+}
+
+void ota_confirm_running_image(void)
+{
+    /* Only a freshly OTA'd image boots in PENDING_VERIFY; for any other image
+     * (normal boot, UART flash) this is a no-op. Reaching here means the device
+     * rejoined the network, i.e. the new firmware's stack/radio work -- our
+     * health check -- so cancel the pending rollback and keep the new image. If
+     * the new image had instead crashed/wedged before this point, the watchdog
+     * reboot would let the bootloader revert to the previous working image. */
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t state;
+    if (esp_ota_get_state_partition(running, &state) == ESP_OK &&
+        state == ESP_OTA_IMG_PENDING_VERIFY) {
+        esp_err_t err = esp_ota_mark_app_valid_cancel_rollback();
+        if (err == ESP_OK) {
+            ESP_LOGW(TAG, "New OTA image confirmed healthy (rejoined network); rollback cancelled");
+        } else {
+            ESP_LOGE(TAG, "Failed to confirm OTA image: %s", esp_err_to_name(err));
+        }
+    }
 }
 
 esp_err_t ota_handle_value(const esp_zb_zcl_ota_upgrade_value_message_t *msg)

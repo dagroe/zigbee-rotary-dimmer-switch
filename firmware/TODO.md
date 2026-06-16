@@ -3,18 +3,6 @@
 Deferred robustness/maintainability items from the wall-install review.
 Items are roughly in priority order.
 
-## Needs design decision / larger change
-
-- [ ] **Enable OTA rollback.** OTA download/apply is implemented (standard ZCL
-  OTA Upgrade client — see `docs/OTA.md`); what remains is auto-revert of a bad
-  image. Turn on `CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE` and gate the existing
-  `esp_ota_mark_app_valid_cancel_rollback()` call (in `ota_client_start`) behind
-  a real health check — ideally "marked valid only once the device has rejoined
-  the network" — otherwise a device that boots but can't join will roll back.
-  - [x] Confirmed module flash is 4MB; set `CONFIG_ESPTOOLPY_FLASHSIZE_4MB`.
-  - [x] Dual-OTA partition layout (`ota_0`/`ota_1` 1.5MB each + `otadata`).
-  - [x] OTA Upgrade client cluster + image download/apply (`ota_driver.c`).
-
 ## Smaller follow-ups
 
 - [ ] **Suppress commands when not joined to a network.** The encoder/button
@@ -41,3 +29,7 @@ Items are roughly in priority order.
 - [x] Raise Zigbee task priority/stack
 - [x] Keep GPIO ISRs in IRAM (no dropped edges during flash writes)
 - [x] Debounce only the active button's interrupt
+- [x] 4MB flash + dual-OTA partition layout
+- [x] Standard Zigbee OTA Upgrade client (download/apply; see `docs/OTA.md`)
+- [x] OTA rollback: image confirmed only after rejoining the network, else
+      auto-reverts to the previous image
