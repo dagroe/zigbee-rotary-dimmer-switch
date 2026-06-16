@@ -3,15 +3,6 @@
 Deferred robustness/maintainability items from the wall-install review.
 Items are roughly in priority order.
 
-## Hardware-blocked (needs next PCB revision)
-
-- [ ] **Move the relay driver off GPIO15 (D15).** GPIO15 is an ESP32-C6
-  strapping pin, so the relay-driver net is sampled at boot and the relay state
-  is indeterminate from power-on until firmware initializes the pin. Not driven
-  by current firmware, so harmless today, but move to a plain GPIO (GPIO2 or
-  GPIO3 recommended — keeps GPIO4/GPIO5 free for external JTAG) before adding
-  local relay control. (schematic net D15 → Q1 base)
-
 ## Needs design decision / larger change
 
 - [ ] **Add OTA firmware update.** The partition table has a single `factory`
@@ -41,6 +32,7 @@ Items are roughly in priority order.
 ## Done (wall-install review, this branch)
 
 - [x] Move commission button off strapping pin GPIO9 → GPIO23 (board rewired + firmware)
+- [x] Move relay driver off strapping pin GPIO15 → GPIO2 (board rewired; not yet driven by firmware)
 - [x] Lock cross-task Zigbee stack calls (fixes vPortExitCritical freeze)
 - [x] Reboot on critical init failure instead of hanging
 - [x] Bound the Zigbee stack-lock wait so UI tasks can't wedge
