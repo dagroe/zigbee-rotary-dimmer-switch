@@ -6509,6 +6509,10 @@
 		(uuid "11eb887d-4975-4a73-8645-e631f6f3c8b6")
 	)
 	(no_connect
+		(at 223.52 73.66)
+		(uuid "12c172fa-61a1-4080-870c-a71e96b20d61")
+	)
+	(no_connect
 		(at 171.45 142.24)
 		(uuid "12e79a72-e212-440e-b575-415f220061ba")
 	)
@@ -6547,10 +6551,6 @@
 	(no_connect
 		(at 223.52 33.02)
 		(uuid "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c01")
-	)
-	(no_connect
-		(at 223.52 35.56)
-		(uuid "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c02")
 	)
 	(no_connect
 		(at 223.52 38.1)
@@ -7714,6 +7714,16 @@
 	)
 	(wire
 		(pts
+			(xy 217.17 35.56) (xy 223.52 35.56)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "83643b20-ffd9-4dc3-8059-8b72a78d4556")
+	)
+	(wire
+		(pts
 			(xy 53.34 90.17) (xy 78.74 90.17)
 		)
 		(stroke
@@ -8141,16 +8151,6 @@
 			(type default)
 		)
 		(uuid "aeddeae4-e2c3-4eb2-9d5e-327d667047a9")
-	)
-	(wire
-		(pts
-			(xy 218.44 73.66) (xy 223.52 73.66)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "afbf29f8-c9cf-4054-a02c-65f20bd7f107")
 	)
 	(wire
 		(pts
@@ -8782,6 +8782,16 @@
 		)
 		(uuid "326cbbac-9bb0-48ac-a386-26c469919747")
 	)
+	(label "D02_relay"
+		(at 78.74 152.4 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "352f3751-46c3-4063-8ff7-fd018de72f48")
+	)
 	(label "D18"
 		(at 218.44 83.82 180)
 		(effects
@@ -8872,16 +8882,6 @@
 		)
 		(uuid "883524c4-1d1d-4d3a-8c56-e6d656380561")
 	)
-	(label "D15"
-		(at 78.74 152.4 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "892c094c-a7a3-41a2-91c4-434020961440")
-	)
 	(label "UART_TXD"
 		(at 251.46 82.55 0)
 		(effects
@@ -8931,6 +8931,16 @@
 			(justify right bottom)
 		)
 		(uuid "a7138c51-5a41-4aa5-82cc-b832300d71e0")
+	)
+	(label "D02_relay"
+		(at 217.17 35.56 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "ac3ad980-ce03-4956-8889-431f837aa4ce")
 	)
 	(label "HV1"
 		(at 45.72 132.08 0)
@@ -9001,16 +9011,6 @@
 			(justify left bottom)
 		)
 		(uuid "c854366f-5a86-4832-b8f9-65111c9ae883")
-	)
-	(label "D15"
-		(at 218.44 73.66 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "cd31b4b3-f793-43f7-a721-3459002d9c3d")
 	)
 	(label "D01"
 		(at 218.44 55.88 180)
