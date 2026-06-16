@@ -6569,10 +6569,6 @@
 		(uuid "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c06")
 	)
 	(no_connect
-		(at 246.38 87.63)
-		(uuid "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c07")
-	)
-	(no_connect
 		(at 95.25 44.45)
 		(uuid "b5695d55-3bdb-4724-92c8-a8a30d2457e0")
 	)
@@ -8368,6 +8364,16 @@
 	)
 	(wire
 		(pts
+			(xy 246.38 87.63) (xy 251.46 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d4e8bad8-5a3c-4725-acc8-beb114785c23")
+	)
+	(wire
+		(pts
 			(xy 44.45 45.72) (xy 50.8 45.72)
 		)
 		(stroke
@@ -8756,16 +8762,6 @@
 		)
 		(uuid "1152930f-d0bc-4b84-8a97-3652f44dda64")
 	)
-	(label "D09"
-		(at 110.49 85.09 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "1a8306b1-da68-4a83-aa82-fbd643d95a0d")
-	)
 	(label "D06"
 		(at 218.44 60.96 180)
 		(effects
@@ -8926,6 +8922,16 @@
 		)
 		(uuid "9a762296-4307-4b87-b2b5-568cadd8d263")
 	)
+	(label "D23_commission"
+		(at 110.49 85.09 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "a7138c51-5a41-4aa5-82cc-b832300d71e0")
+	)
 	(label "HV1"
 		(at 45.72 132.08 0)
 		(effects
@@ -9015,6 +9021,16 @@
 			(justify right bottom)
 		)
 		(uuid "d23dc153-d9b0-4dea-80cb-fcbaf88c3ec5")
+	)
+	(label "D23_commission"
+		(at 251.46 87.63 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "d4114cdb-0fd9-4c60-a99e-a975abfd485d")
 	)
 	(label "D13"
 		(at 160.02 41.91 0)
