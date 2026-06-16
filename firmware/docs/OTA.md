@@ -37,6 +37,22 @@ its file version must be **greater** than the running `OTA_UPGRADE_FILE_VERSION`
 
 ## Serving it from zigbee2mqtt
 
+### a) Make z2m recognize the device (one-time)
+
+z2m only offers OTA for devices it recognizes; a custom device shows up as
+unknown and has no OTA controls. Add the external converter `z2m/ESP_DIMMER_1.js`
+(copy it next to `configuration.yaml`) and reference it:
+
+```yaml
+external_converters:
+  - ESP_DIMMER_1.js
+```
+
+Restart z2m; the device page should now show vendor/model `DG Electronics /
+ESP_DIMMER_1` and an **OTA** section reporting the running version.
+
+### b) Point z2m at your image
+
 z2m needs a local OTA index that points at your `.ota`. The exact config key has
 changed across z2m versions — check your version's OTA docs — but the shape is:
 
