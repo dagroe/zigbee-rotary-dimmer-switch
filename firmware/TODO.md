@@ -39,3 +39,7 @@ Items are roughly in priority order.
       SW Build ID, app version, and the .ota packaging tool
 - [x] Suppress outbound commands when not joined; LED feedback on every command
       (white = sent, red = dropped/not joined)
+- [x] Relay: NC inversion fix, local GPIO18 button, and configurable
+      power_on_behavior (StartUpOnOff, NVS-persisted)
+- [x] UX: push-rotate = color temperature; factory-reset warning; knob-push
+      hold dead-zone fix

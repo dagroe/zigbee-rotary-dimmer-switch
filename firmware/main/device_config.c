@@ -3,6 +3,7 @@
 #include "ha/esp_zigbee_ha_standard.h"
 #include "device_config.h"
 #include "ota_driver.h"
+#include "relay_driver.h"
 #include "version.h"
 
 char modelid[] = { 12, 'E','S','P','_','D','I','M','M','E','R','_','1' };
@@ -102,8 +103,15 @@ void configure_device(void)
        attribute means "outlet powered"; the GPIO (with NC inversion) is driven
        from the attribute write in the action handler. Default ON = powered,
        matching the relay's de-energized NC default. */
-    esp_zb_on_off_cluster_cfg_t relay_on_off_cfg = { .on_off = 1 };  /* default: outlet powered */
+    esp_zb_on_off_cluster_cfg_t relay_on_off_cfg = { .on_off = relay_get() ? 1 : 0 };  /* restored state */
     esp_zb_attribute_list_t *relay_on_off_cluster = esp_zb_on_off_cluster_create(&relay_on_off_cfg);
+    /* StartUpOnOff (z2m "power_on_behavior"): off/on/toggle/previous. Initial value
+       is the persisted setting; coordinator writes are handled in the action handler. */
+    uint8_t relay_startup = relay_get_startup_behavior();
+    esp_zb_cluster_add_attr(relay_on_off_cluster, ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,
+                            ESP_ZB_ZCL_ATTR_ON_OFF_START_UP_ON_OFF,
+                            ESP_ZB_ZCL_ATTR_TYPE_8BIT_ENUM, ESP_ZB_ZCL_ATTR_ACCESS_READ_WRITE,
+                            &relay_startup);
     esp_zb_identify_cluster_cfg_t relay_identify_cfg = {
         .identify_time = ESP_ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE,
     };

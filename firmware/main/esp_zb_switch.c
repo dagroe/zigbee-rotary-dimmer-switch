@@ -261,6 +261,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
         if (state == SWITCH_RELEASE_DETECTED) {
             bool outlet_on = !relay_get();
             relay_set(outlet_on);
+            relay_remember();   // persist for the "previous" power-on behavior
             uint8_t attr_val = outlet_on ? 1 : 0;
             ZB_LOCKED(esp_zb_zcl_set_attribute_val(HA_RELAY_ENDPOINT,
                       ESP_ZB_ZCL_CLUSTER_ID_ON_OFF, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
@@ -397,12 +398,16 @@ static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
     case ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID: {
         const esp_zb_zcl_set_attr_value_message_t *m =
             (const esp_zb_zcl_set_attr_value_message_t *)message;
-        /* Coordinator wrote the relay endpoint's On/Off attribute -> drive GPIO. */
+        /* Coordinator wrote an attribute on the relay endpoint. */
         if (m->info.dst_endpoint == HA_RELAY_ENDPOINT &&
             m->info.cluster == ESP_ZB_ZCL_CLUSTER_ID_ON_OFF &&
-            m->attribute.id == ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID &&
             m->attribute.data.value != NULL) {
-            relay_set(*(bool *)m->attribute.data.value);
+            if (m->attribute.id == ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID) {
+                relay_set(*(bool *)m->attribute.data.value);
+                relay_remember();   // persist for the "previous" power-on behavior
+            } else if (m->attribute.id == ESP_ZB_ZCL_ATTR_ON_OFF_START_UP_ON_OFF) {
+                relay_set_startup_behavior(*(uint8_t *)m->attribute.data.value);
+            }
         }
         return ESP_OK;
     }
@@ -422,6 +427,12 @@ static void esp_zb_task(void *pvParameters)
     esp_zb_core_action_handler_register(zb_action_handler);
 
     ESP_ERROR_CHECK(esp_zb_start(false));
+    /* Reflect the restored relay state into the on/off attribute (runs in stack
+     * context, so no ZB_LOCKED needed) so the coordinator shows the right state. */
+    uint8_t relay_val = relay_get() ? 1 : 0;
+    esp_zb_zcl_set_attribute_val(HA_RELAY_ENDPOINT, ESP_ZB_ZCL_CLUSTER_ID_ON_OFF,
+                                 ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                                 ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID, &relay_val, false);
     ota_client_start(HA_ONOFF_SWITCH_ENDPOINT);
     esp_zb_stack_main_loop();
 }
@@ -556,6 +567,8 @@ void app_main(void) {
         .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),
     };
     ESP_ERROR_CHECK(nvs_flash_init());
+    /* NVS is up now: apply the persisted relay power-on behavior. */
+    relay_apply_startup();
     ESP_ERROR_CHECK(esp_zb_platform_config(&config));
 
     // create queue to pass LED state events
