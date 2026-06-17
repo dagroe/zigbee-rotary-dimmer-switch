@@ -13,8 +13,8 @@
  * the firmware without passing the version by hand.
  * ------------------------------------------------------------------------- */
 #define FW_VERSION_MAJOR 1
-#define FW_VERSION_MINOR 0
-#define FW_VERSION_PATCH 3
+#define FW_VERSION_MINOR 1
+#define FW_VERSION_PATCH 0
 
 /* 32-bit OTA file version. Monotonic as long as the tuple increases; z2m
  * compares this number to decide whether an offered image is newer.
