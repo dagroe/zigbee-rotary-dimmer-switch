@@ -37,6 +37,7 @@
 static switch_func_pair_t button_func_pair[] = {
     {GPIO_INPUT_COMMISSION_SWITCH, SWITCH_COMMISION_CONTROL},
     {GPIO_INPUT_IO_TOGGLE_SWITCH, SWITCH_ONOFF_TOGGLE_CONTROL},
+    {GPIO_INPUT_RELAY_SWITCH, SWITCH_RELAY_CONTROL},
 };
 
 static QueueHandle_t led_evt_queue = NULL;
@@ -240,6 +241,23 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 break;
             default:
                 break;
+        }
+    }
+
+    if (button_func_pair->func == SWITCH_RELAY_CONTROL) {
+        // Dedicated relay button. Works regardless of network state (this is the
+        // local/offline cut-off), and we reflect the new outlet state back to the
+        // coordinator's on/off attribute so HA stays in sync.
+        if (state == SWITCH_RELEASE_DETECTED) {
+            bool outlet_on = !relay_get();
+            relay_set(outlet_on);
+            uint8_t attr_val = outlet_on ? 1 : 0;
+            ZB_LOCKED(esp_zb_zcl_set_attribute_val(HA_RELAY_ENDPOINT,
+                      ESP_ZB_ZCL_CLUSTER_ID_ON_OFF, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE,
+                      ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID, &attr_val, false));
+            ESP_LOGI(TAG, "Relay button: outlet %s", outlet_on ? "POWERED" : "CUT");
+            led_state_t led = LED_COLOR_STATE_BLINK_ONCE_BLUE;  // distinct from light commands (white)
+            xQueueSend(led_evt_queue, &led, 0);
         }
     }
 }

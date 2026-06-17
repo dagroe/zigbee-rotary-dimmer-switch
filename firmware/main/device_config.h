@@ -23,6 +23,9 @@ extern "C" {
    GPIO. Wiring is unchanged: button to GND, external pull-up to 3.3V, active-low. */
 #define GPIO_INPUT_COMMISSION_SWITCH  GPIO_NUM_23
 
+/* Dedicated button to toggle the local 230V relay (works without a coordinator). */
+#define GPIO_INPUT_RELAY_SWITCH       GPIO_NUM_18
+
 /* Encoder config ==================================================================== */
 #define GPIO_INPUT_IO_TOGGLE_SWITCH  GPIO_NUM_20
 

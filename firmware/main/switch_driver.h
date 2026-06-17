@@ -75,6 +75,7 @@ typedef enum {
     SWITCH_LEVEL_CYCLE_CONTROL,
     SWITCH_COLOR_CONTROL,
     SWITCH_COMMISION_CONTROL,
+    SWITCH_RELAY_CONTROL,
 } switch_func_t;
 
 typedef struct {
