@@ -1,0 +1,10 @@
+[
+  {
+    "fileVersion": 16842752,
+    "fileSize": 669006,
+    "manufacturerCode": 4891,
+    "imageType": 4112,
+    "sha512": "9fd3e10267df9642906872251712b68a26bc3997d2eec3558347b8fd9e9aa44b914fcbc88e107fb9418dcfa93e3228f08f130084c3f382d100b600f94c96e786",
+    "url": "https://raw.githubusercontent.com/dagroe/zigbee-rotary-dimmer-switch/main/firmware/z2m/images/dimmer-1.1.0.ota"
+  }
+]

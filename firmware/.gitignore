@@ -1,2 +1,6 @@
 build/*
 managed_components/*
+# Packaged OTA images are build artifacts -- except the published release
+# images under z2m/images/, which are served to users via GitHub.
+*.ota
+!z2m/images/*.ota

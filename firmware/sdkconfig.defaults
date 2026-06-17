@@ -1,4 +1,11 @@
 #
+# Flash (module has 4MB)
+#
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
+# end of Flash
+
+#
 # Partition Table
 #
 CONFIG_PARTITION_TABLE_CUSTOM=y
@@ -29,3 +36,15 @@ CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
 # end of Zboss
 # end of Component config
+
+#
+# Reliability for unattended wall install
+#
+# Reboot (rather than only warn) if a task starves the idle task / hangs, so the
+# device self-recovers from a software wedge instead of sitting frozen.
+CONFIG_ESP_TASK_WDT_PANIC=y
+# Boot a freshly OTA'd image in pending-verify state; firmware confirms it only
+# after rejoining the network, otherwise the bootloader rolls back to the
+# previous working image on the next reboot.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+# end of Reliability

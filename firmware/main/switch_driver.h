@@ -42,9 +42,6 @@
 extern "C" {
 #endif
 
-/* user should configure which I/O port as toggle switch input, default is GPIO9 */
-#define GPIO_INPUT_COMMISSION_SWITCH  GPIO_NUM_9
-
 /* config button level depends on the pull up/down setting
    push button level is on level = 1 when pull-down enable
    push button level is on level = 0 when pull-up enable
@@ -78,6 +75,7 @@ typedef enum {
     SWITCH_LEVEL_CYCLE_CONTROL,
     SWITCH_COLOR_CONTROL,
     SWITCH_COMMISION_CONTROL,
+    SWITCH_RELAY_CONTROL,
 } switch_func_t;
 
 typedef struct {
