@@ -12,6 +12,13 @@ rotary dimmer** (`ESP_DIMMER_1`):
 The device speaks the **standard ZCL OTA Upgrade cluster**, so this also works
 with ZHA/deCONZ — they just consume `ota-index.json` differently.
 
+### What the device exposes
+
+| Endpoint | Role | Use |
+| -------- | ---- | --- |
+| 1 (`controller`) | sends on/off, level (brightness) and color commands | Bind it to your light(s) via the device's **Bind** tab, or use the emitted commands in automations. |
+| 2 (`relay`) | on/off **output** for the on-board 230V relay | Switch the connected lamp socket directly (e.g. emergency cut-off) from HA/z2m. |
+
 ## Install (zigbee2mqtt users)
 
 1. **Add the external converter.** Download

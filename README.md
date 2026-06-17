@@ -35,7 +35,7 @@ Since I though "well, it can't be that hard to hook up a rotary encoder to a Zig
 I have built a second prototype using the ESP32-C6 chip. Hardware, firmware, and enclosure design files are available in this repository but I need to update this README at some point ;)
 
 ## zigbee2mqtt integration & over-the-air updates
-The dimmer joins any standard Zigbee coordinator and implements the standard Zigbee OTA Upgrade cluster, so firmware updates are delivered over the air. To add the device to zigbee2mqtt and receive OTA updates from this repo, follow [`firmware/z2m/README.md`](firmware/z2m/README.md). Firmware-side OTA details (partitioning, rollback) are in [`firmware/docs/OTA.md`](firmware/docs/OTA.md).
+The dimmer joins any standard Zigbee coordinator and exposes two endpoints: a **controller** (endpoint 1) that sends on/off, brightness and color commands to bound lights, and an on-board **230V relay** (endpoint 2) to switch the connected lamp socket directly. It also implements the standard Zigbee OTA Upgrade cluster, so firmware updates are delivered over the air. To add the device to zigbee2mqtt and receive OTA updates from this repo, follow [`firmware/z2m/README.md`](firmware/z2m/README.md). Firmware-side OTA details (partitioning, rollback) are in [`firmware/docs/OTA.md`](firmware/docs/OTA.md).
 
 ## Help wanted
 My prototype is working but I see a lot of potential for improvement. Since I am mostly a software engineer with limited knowledge of electronics, I am looking for other interested in taking this project further. You can find me on discord here: https://discord.gg/CjbDc5nPja or checkout the discussion here: https://community.home-assistant.io/t/diy-zigbee-rotary-wall-dimmer/681751
