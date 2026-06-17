@@ -15,6 +15,7 @@ fileVersion/fileSize/sha512 you need for the zigbee2mqtt override index.
 """
 import argparse
 import hashlib
+import json
 import os
 import re
 import struct
@@ -26,6 +27,11 @@ TAG_UPGRADE_IMAGE   = 0x0000
 HEADER_LEN          = 56  # no optional header fields
 
 MAIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "main")
+
+# Where published .ota images are served from (raw GitHub). Used to build the
+# index `url` when --base-url is not given.
+DEFAULT_BASE_URL = ("https://raw.githubusercontent.com/dagroe/"
+                    "zigbee-rotary-dimmer-switch/main/firmware/z2m/images")
 
 
 def auto_int(x):
@@ -77,6 +83,10 @@ def main():
     p.add_argument("--image-type", type=auto_int, default=None, help="override image type")
     p.add_argument("--version", type=auto_int, default=None, help="override file version")
     p.add_argument("--header-string", default="DG Dimmer OTA", help="<=32 char label")
+    p.add_argument("--index", default=None,
+                   help="OTA index JSON to add/replace this image's entry in (for z2m auto-discovery)")
+    p.add_argument("--base-url", default=DEFAULT_BASE_URL,
+                   help="base URL the .ota is served from; index url = base-url + output filename")
     args = p.parse_args()
 
     manuf   = resolve(args.manuf, define_from_ota_header("OTA_UPGRADE_MANUFACTURER"), "manuf")
@@ -109,13 +119,39 @@ def main():
     with open(args.outfile, "wb") as f:
         f.write(blob)
 
+    sha512 = hashlib.sha512(blob).hexdigest()
     print(f"Wrote {args.outfile}")
     print(f"  app bytes   : {len(fw)}")
     print(f"  fileVersion : {version}        (0x{version:08X})")
     print(f"  manufactCode: {manuf}            (0x{manuf:04X})")
     print(f"  imageType   : {itype}            (0x{itype:04X})")
     print(f"  fileSize    : {len(blob)}")
-    print(f"  sha512      : {hashlib.sha512(blob).hexdigest()}")
+    print(f"  sha512      : {sha512}")
+
+    if args.index:
+        entry = {
+            "fileVersion": version,
+            "fileSize": len(blob),
+            "manufacturerCode": manuf,
+            "imageType": itype,
+            "sha512": sha512,
+            "url": args.base_url.rstrip("/") + "/" + os.path.basename(args.outfile),
+        }
+        try:
+            with open(args.index) as f:
+                index = json.load(f)
+            if not isinstance(index, list):
+                index = []
+        except (OSError, ValueError):
+            index = []
+        # Keep one entry per (manufacturerCode, imageType): drop older ones.
+        index = [e for e in index
+                 if not (e.get("manufacturerCode") == manuf and e.get("imageType") == itype)]
+        index.append(entry)
+        with open(args.index, "w") as f:
+            json.dump(index, f, indent=2)
+            f.write("\n")
+        print(f"  index       : updated {args.index} -> {entry['url']}")
 
 
 if __name__ == "__main__":

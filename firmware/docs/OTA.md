@@ -37,51 +37,18 @@ the packaging script produces.
    The script prints the `fileVersion`, `fileSize`, and `sha512` to drop into the
    z2m index below.
 
-## Serving it from zigbee2mqtt
+## Serving it to zigbee2mqtt
 
-### a) Make z2m recognize the device (one-time)
+Users install the device + auto-OTA by adding the external converter and the
+hosted OTA index — see **[`../z2m/README.md`](../z2m/README.md)**. As a
+maintainer you publish a release by pointing `make_ota.py` at `z2m/ota-index.json`
+(it writes the image into `z2m/images/` and updates the index with the raw-GitHub
+`url`), then commit + push to `main`; every user's z2m then discovers it.
 
-z2m only offers OTA for devices it recognizes; a custom device shows up as
-unknown and has no OTA controls. Add the external converter `z2m/ESP_DIMMER_1.js`
-(copy it next to `configuration.yaml`) and reference it:
-
-```yaml
-external_converters:
-  - ESP_DIMMER_1.js
-```
-
-Restart z2m; the device page should now show vendor/model `DG Electronics /
-ESP_DIMMER_1` and an **OTA** section reporting the running version.
-
-### b) Point z2m at your image
-
-z2m needs a local OTA index that points at your `.ota`. The exact config key has
-changed across z2m versions — check your version's OTA docs — but the shape is:
-
-`configuration.yaml`:
-```yaml
-ota:
-  zigbee_ota_override_index_location: my_ota_index.json
-```
-
-`my_ota_index.json` (decimal; use the values `make_ota.py` printed):
-```json
-[
-  {
-    "fileVersion": 16777217,
-    "manufacturerCode": 4891,
-    "imageType": 4112,
-    "fileSize": 1100000,
-    "sha512": "<from make_ota.py>",
-    "url": "/opt/zigbee2mqtt/data/ota/dimmer_v2.ota"
-  }
-]
-```
-
-- `4891` = `0x131B`, `4112` = `0x1010`, `16777217` = `0x01000001`.
-- Put `dimmer_v2.ota` at the `url` path; set `fileSize`/`sha512` from the script.
-- Restart z2m, then in the device's page use **OTA → Check for update / Update**.
-  (ZHA: enable the OTA provider / advanced OTA and trigger an update similarly.)
+For a quick local test without GitHub, you can instead point z2m's
+`ota.zigbee_ota_override_index_location` at a local `ota-index.json` whose `url`
+is a path z2m can read (in Docker, the in-container path), or use z2m's manual
+"upload firmware" button to push a `.ota` directly.
 
 ## Rollback (auto-revert of a bad update)
 
