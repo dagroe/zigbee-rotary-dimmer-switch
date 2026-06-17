@@ -40,6 +40,11 @@ static switch_func_pair_t button_func_pair[] = {
 
 static QueueHandle_t led_evt_queue = NULL;
 
+// Set true once steering succeeds, cleared on a reset-type leave. Gates outbound
+// commands so we don't fire ZCL requests into the void, and drives a clear
+// "not joined" LED indication.
+static volatile bool s_network_joined = false;
+
 // Shared state between button handler and encoder task for button+rotate feature
 // When button is held and encoder rotates, send HUE commands instead of brightness
 // When button is released after rotation, suppress the toggle command
@@ -84,6 +89,21 @@ static volatile TickType_t button_press_tick = 0;
         }                                                                     \
     } while (0)
 
+// Send a bound ZCL command, but only while we're actually on a network. Either
+// way the user gets LED feedback: a white blink when the command is sent, a red
+// blink when it's dropped because the device isn't joined.
+#define ZB_SEND_CMD(stmt) do {                                       \
+        led_state_t _fb;                                             \
+        if (s_network_joined) {                                      \
+            ZB_LOCKED(stmt);                                         \
+            _fb = LED_COLOR_STATE_BLINK_ONCE_WHITE;                  \
+        } else {                                                     \
+            ESP_LOGW(TAG, "Not joined; dropped: %s", #stmt);         \
+            _fb = LED_COLOR_STATE_BLINK_ONCE_RED;                    \
+        }                                                            \
+        xQueueSend(led_evt_queue, &_fb, 0);                          \
+    } while (0)
+
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
 
 static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_state_t state)
@@ -123,7 +143,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     #ifdef DEBUG_ENABLED
                     ESP_LOGI(TAG, "Send 'on_off toggle' command");
                     #endif
-                    ZB_LOCKED(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
+                    ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
                 } else {
                     #ifdef DEBUG_ENABLED
                     ESP_LOGI(TAG, "Toggle suppressed - encoder rotated while pressed");
@@ -149,7 +169,7 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     #ifdef DEBUG_ENABLED
                     ESP_LOGI(TAG, "Send 'on_off off' command");
                     #endif
-                    ZB_LOCKED(esp_zb_zcl_on_off_cmd_req(&off_cmd_req));
+                    ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&off_cmd_req));
                 } else {
                     #ifdef DEBUG_ENABLED
                     ESP_LOGI(TAG, "Off suppressed - encoder rotated while pressed");
@@ -289,6 +309,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
                      esp_zb_get_pan_id(), esp_zb_get_current_channel(), esp_zb_get_short_address());
             #endif
             
+        s_network_joined = true;
         led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_GREEN;
         xQueueSend(led_evt_queue, &led_state_success, 0);
 
@@ -300,11 +321,26 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
             esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_NETWORK_STEERING, 3000);
         }
         break;
-    /* NOTE: no ESP_ZB_ZDO_SIGNAL_LEAVE / NO_ACTIVE_LINKS_LEFT self-heal here.
-     * Re-steering from these handlers raced the stack's own leave/reset and
-     * commissioning state machine (corrupted joins; asserted in zdo_app.c during
-     * a forced leave-reset). The stack auto-rejoins routers on transient loss.
-     * See firmware/TODO.md for re-implementing this safely (reboot-on-reset). */
+    case ESP_ZB_ZDO_SIGNAL_LEAVE: {
+        /* Track connection state + LED ONLY -- do NOT call commissioning APIs
+         * here: re-steering from the leave handler raced the stack's leave/reset
+         * state machine and asserted in zdo_app.c (see git history). A
+         * leave-with-REJOIN is the stack reconnecting itself, so ignore it; only
+         * a leave-with-RESET means we were actually removed from the network. We
+         * deliberately do NOT clear the flag on transient link loss, because a
+         * router auto-rejoins without necessarily re-emitting a steering signal,
+         * which would leave commands stuck "suppressed". */
+        esp_zb_zdo_signal_leave_params_t *leave_params =
+            (esp_zb_zdo_signal_leave_params_t *)esp_zb_app_signal_get_params(p_sg_p);
+        if (leave_params && leave_params->leave_type == ESP_ZB_NWK_LEAVE_TYPE_REJOIN) {
+            break;
+        }
+        s_network_joined = false;
+        ESP_LOGW(TAG, "Removed from network (reset leave); commands suppressed until re-paired");
+        led_state_t led_state_lost = LED_COLOR_STATE_WARN_RED;
+        xQueueSend(led_evt_queue, &led_state_lost, 0);
+        break;
+    }
     // case ESP_ZB_NWK_SIGNAL_PERMIT_JOIN_STATUS:
     //     if (err_status == ESP_OK) {
     //         if (*(uint8_t *)esp_zb_app_signal_get_params(p_sg_p)) {
@@ -440,10 +476,7 @@ static void encoder_task(void *pvParameters) {
                     #ifdef DEBUG_ENABLED
                     ESP_LOGI(TAG, "Send 'color step' command (button held)");
                     #endif
-                    ZB_LOCKED(esp_zb_zcl_color_step_hue_cmd_req(&cmd_req));
-
-                    led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_WHITE;
-                    xQueueSend(led_evt_queue, &led_state_success, 0);
+                    ZB_SEND_CMD(esp_zb_zcl_color_step_hue_cmd_req(&cmd_req));
                 } else {
                     // Within debounce period - ignore this encoder event (likely noise from button press)
                     #ifdef DEBUG_ENABLED
@@ -462,10 +495,7 @@ static void encoder_task(void *pvParameters) {
                 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "Send 'level step' command");
                 #endif
-                ZB_LOCKED(esp_zb_zcl_level_step_cmd_req(&cmd_req));
-
-                led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_WHITE;
-                xQueueSend(led_evt_queue, &led_state_success, 0);
+                ZB_SEND_CMD(esp_zb_zcl_level_step_cmd_req(&cmd_req));
             }
         }
     }

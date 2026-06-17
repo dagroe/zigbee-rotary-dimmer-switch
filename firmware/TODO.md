@@ -15,11 +15,6 @@ Items are roughly in priority order.
   rather than calling commissioning APIs from the leave handler, and test
   against a coordinator that actively removes the device.
 
-- [ ] **Suppress commands when not joined to a network.** The encoder/button
-  paths call `esp_zb_zcl_*_cmd_req` regardless of join state. Cheap to guard
-  with a "joined" flag (set on steering success, cleared on leave) — also lets
-  the LED show a clear "not joined" state. Deferred because a wrong flag would
-  make the device look dead; needs careful join/reboot-state handling.
 - [ ] **Handle LED-strip init failure more gracefully.** If
   `led_strip_new_rmt_device` fails, `led_task` is never started and nothing
   drains `led_evt_queue`; senders use timeout 0 so it is harmless, but the
@@ -42,3 +37,5 @@ Items are roughly in priority order.
       auto-reverts to the previous image
 - [x] Single-source firmware version (`main/version.h`) feeding OTA version,
       SW Build ID, app version, and the .ota packaging tool
+- [x] Suppress outbound commands when not joined; LED feedback on every command
+      (white = sent, red = dropped/not joined)
