@@ -96,5 +96,28 @@ void configure_device(void)
         .app_device_version = 0,
     };
     esp_zb_ep_list_add_ep(esp_zb_ep_list, esp_zb_cluster_list, endpoint_config);
+
+    /* Endpoint 2: on/off SERVER for the local 230V relay, so the coordinator can
+       switch the connected lamp socket (e.g. emergency cut-off). The GPIO is
+       driven from the on/off attribute write in the action handler. */
+    esp_zb_on_off_cluster_cfg_t relay_on_off_cfg = { .on_off = 0 };  /* default OFF */
+    esp_zb_attribute_list_t *relay_on_off_cluster = esp_zb_on_off_cluster_create(&relay_on_off_cfg);
+    esp_zb_identify_cluster_cfg_t relay_identify_cfg = {
+        .identify_time = ESP_ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE,
+    };
+    esp_zb_attribute_list_t *relay_identify_cluster = esp_zb_identify_cluster_create(&relay_identify_cfg);
+
+    esp_zb_cluster_list_t *relay_cluster_list = esp_zb_zcl_cluster_list_create();
+    esp_zb_cluster_list_add_identify_cluster(relay_cluster_list, relay_identify_cluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+    esp_zb_cluster_list_add_on_off_cluster(relay_cluster_list, relay_on_off_cluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+
+    esp_zb_endpoint_config_t relay_endpoint_config = {
+        .endpoint = HA_RELAY_ENDPOINT,
+        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+        .app_device_id = ESP_ZB_HA_ON_OFF_OUTPUT_DEVICE_ID,
+        .app_device_version = 0,
+    };
+    esp_zb_ep_list_add_ep(esp_zb_ep_list, relay_cluster_list, relay_endpoint_config);
+
     esp_zb_device_register(esp_zb_ep_list);
 }

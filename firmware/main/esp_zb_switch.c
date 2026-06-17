@@ -27,6 +27,7 @@
 #include "rotary_encoder.h"
 #include "led_driver.h"
 #include "ota_driver.h"
+#include "relay_driver.h"
 
 #if defined ZB_ED_ROLE
 #error Define ZB_COORDINATOR_ROLE in idf.py menuconfig to compile light switch source code.
@@ -365,6 +366,18 @@ static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
     switch (callback_id) {
     case ESP_ZB_CORE_OTA_UPGRADE_VALUE_CB_ID:
         return ota_handle_value((const esp_zb_zcl_ota_upgrade_value_message_t *)message);
+    case ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID: {
+        const esp_zb_zcl_set_attr_value_message_t *m =
+            (const esp_zb_zcl_set_attr_value_message_t *)message;
+        /* Coordinator wrote the relay endpoint's On/Off attribute -> drive GPIO. */
+        if (m->info.dst_endpoint == HA_RELAY_ENDPOINT &&
+            m->info.cluster == ESP_ZB_ZCL_CLUSTER_ID_ON_OFF &&
+            m->attribute.id == ESP_ZB_ZCL_ATTR_ON_OFF_ON_OFF_ID &&
+            m->attribute.data.value != NULL) {
+            relay_set(*(bool *)m->attribute.data.value);
+        }
+        return ESP_OK;
+    }
     default:
         #ifdef DEBUG_ENABLED
         ESP_LOGI(TAG, "Unhandled Zigbee action callback 0x%x", callback_id);
@@ -502,6 +515,9 @@ static void encoder_task(void *pvParameters) {
 }
 
 void app_main(void) {
+    /* Put the 230V relay in a known-OFF state as the very first thing at boot. */
+    relay_init();
+
     esp_zb_platform_config_t config = {
         .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
         .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),

@@ -12,6 +12,11 @@ extern "C" {
 /* LED config ======================================================================== */
 #define LED_GPIO GPIO_NUM_1
 
+/* Relay config ====================================================================== */
+/* Drives Q1 (NPN) for the on-board 230V relay K1. GPIO high = relay energized.
+   Moved off strapping pin GPIO15 to GPIO2 on the rewired board. */
+#define RELAY_GPIO GPIO_NUM_2
+
 /* Button config ===================================================================== */
 /* Moved off GPIO9 (a strapping/boot pin): holding it at power-up forced serial
    download mode and the app would not start. GPIO23 is a plain, non-strapping
@@ -31,7 +36,8 @@ extern "C" {
 /* Zigbee configuration ============================================================== */
 #define MAX_CHILDREN                    10          /* the max amount of connected devices */
 #define INSTALLCODE_POLICY_ENABLE       false       /* false: join with the default TC link key (what zigbee2mqtt/ZHA use by default) */
-#define HA_ONOFF_SWITCH_ENDPOINT        1           /* esp light switch device endpoint */
+#define HA_ONOFF_SWITCH_ENDPOINT        1           /* the rotary/button controller endpoint */
+#define HA_RELAY_ENDPOINT               2           /* on/off server endpoint for the local 230V relay */
 #define ESP_ZB_PRIMARY_CHANNEL_MASK     ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK  /* Zigbee primary channel mask use in the example */
 
 #define ESP_ZB_ZC_CONFIG()                                                              \
