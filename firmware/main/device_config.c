@@ -98,9 +98,11 @@ void configure_device(void)
     esp_zb_ep_list_add_ep(esp_zb_ep_list, esp_zb_cluster_list, endpoint_config);
 
     /* Endpoint 2: on/off SERVER for the local 230V relay, so the coordinator can
-       switch the connected lamp socket (e.g. emergency cut-off). The GPIO is
-       driven from the on/off attribute write in the action handler. */
-    esp_zb_on_off_cluster_cfg_t relay_on_off_cfg = { .on_off = 0 };  /* default OFF */
+       switch the connected lamp socket (e.g. emergency cut-off). The on/off
+       attribute means "outlet powered"; the GPIO (with NC inversion) is driven
+       from the attribute write in the action handler. Default ON = powered,
+       matching the relay's de-energized NC default. */
+    esp_zb_on_off_cluster_cfg_t relay_on_off_cfg = { .on_off = 1 };  /* default: outlet powered */
     esp_zb_attribute_list_t *relay_on_off_cluster = esp_zb_on_off_cluster_create(&relay_on_off_cfg);
     esp_zb_identify_cluster_cfg_t relay_identify_cfg = {
         .identify_time = ESP_ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE,

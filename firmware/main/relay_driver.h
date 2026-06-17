@@ -6,17 +6,25 @@
 extern "C" {
 #endif
 
-/**
- * @brief Configure the relay GPIO as an output and drive it OFF (de-energized).
- *        Call once, early in app_main, so the 230V relay is in a known safe
- *        state immediately at boot.
+/*
+ * The on-board relay's NORMALLY-CLOSED (NC) contact carries the 230V load:
+ *   - coil DE-energized (GPIO low)  -> NC closed -> outlet POWERED   (default)
+ *   - coil energized     (GPIO high) -> NC open  -> outlet CUT
+ * So an unpowered/dead device leaves the load powered (the lamp keeps working),
+ * and we energize the coil only to actively cut power (e.g. emergency).
+ *
+ * The driver models state as "outlet powered" -- the same meaning as the Zigbee
+ * on/off attribute -- and hides the coil inversion.
  */
+
+/** @brief Configure the relay GPIO and drive the outlet to its default
+ *         (powered). Call once, early in app_main. */
 void relay_init(void);
 
-/** @brief Energize (true) or release (false) the relay. */
-void relay_set(bool on);
+/** @brief Power (true) or cut (false) the outlet. */
+void relay_set(bool outlet_on);
 
-/** @brief Current relay state. */
+/** @brief Current outlet-powered state. */
 bool relay_get(void);
 
 #ifdef __cplusplus

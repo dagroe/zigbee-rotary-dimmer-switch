@@ -6,7 +6,7 @@
 #include "device_config.h"
 
 static const char *TAG = "RELAY";
-static bool s_relay_on;
+static bool s_outlet_on;
 
 void relay_init(void)
 {
@@ -18,17 +18,18 @@ void relay_init(void)
         .intr_type = GPIO_INTR_DISABLE,
     };
     gpio_config(&cfg);
-    relay_set(false);   // default OFF (de-energized) -- safe state for 230V load
+    relay_set(true);   // default: outlet POWERED (matches the de-energized NC default)
 }
 
-void relay_set(bool on)
+void relay_set(bool outlet_on)
 {
-    s_relay_on = on;
-    gpio_set_level(RELAY_GPIO, on ? 1 : 0);
-    ESP_LOGI(TAG, "Relay %s", on ? "ON" : "OFF");
+    s_outlet_on = outlet_on;
+    // NC wiring: powered = coil de-energized = GPIO low; cut = energized = GPIO high.
+    gpio_set_level(RELAY_GPIO, outlet_on ? 0 : 1);
+    ESP_LOGI(TAG, "Outlet %s", outlet_on ? "POWERED" : "CUT");
 }
 
 bool relay_get(void)
 {
-    return s_relay_on;
+    return s_outlet_on;
 }
