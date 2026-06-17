@@ -230,8 +230,26 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                     xQueueSend(led_evt_queue, &led_state, 0);
                 }
                 break;
+            case SWITCH_LONG_PRESS_DETECTED:
+                // Held past 0.5s: warn (blinking yellow) that continuing to ~5s
+                // will factory-reset, so it can't happen silently/accidentally.
+                ESP_LOGW(TAG, "Hold to factory reset (release now to abort)...");
+                {
+                    led_state_t led_state = LED_COLOR_STATE_BLINK_YELLOW;
+                    xQueueSend(led_evt_queue, &led_state, 0);
+                }
+                break;
+            case SWITCH_LONG_RELEASE_DETECTED:
+                // Released during the warning window: abort, no reset, no steer.
+                ESP_LOGI(TAG, "Factory reset aborted");
+                {
+                    led_state_t led_state = s_network_joined ? LED_COLOR_STATE_OFF
+                                                             : LED_COLOR_STATE_WARN_RED;
+                    xQueueSend(led_evt_queue, &led_state, 0);
+                }
+                break;
             case SWITCH_HOLD_DETECTED:
-                // Long hold (5s): factory reset
+                // Held to 5s: factory reset
                 ESP_LOGW(TAG, "Commission button held: factory reset");
                 {
                     led_state_t led_state = LED_COLOR_STATE_BLINK_RED;
