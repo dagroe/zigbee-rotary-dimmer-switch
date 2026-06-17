@@ -13,8 +13,8 @@ The goal of this dimmer switch is to
 
 Also nice to have:
 * be extendable, e.g. easily add multiple dimmer switches or push buttons in multi frames
-* allow for a second rotary input by rotating the knob while pushing it (e.g. to change color temperature or scenes)
-* feature an integrated 230V (or 110V) mechanical switch to switch power of the connected lamp socket (e.g. for emergencies or to reset the lamp when replacing classic wall switches)
+* ✅ allow for a second rotary input by rotating the knob while pushing it (e.g. to change color temperature or scenes) — _implemented: push + rotate changes color temperature_
+* ✅ feature an integrated 230V (or 110V) mechanical switch to switch power of the connected lamp socket (e.g. for emergencies or to reset the lamp when replacing classic wall switches) — _implemented: on-board relay + dedicated button_
 * be affordable
 
 
@@ -32,7 +32,43 @@ Since I though "well, it can't be that hard to hook up a rotary encoder to a Zig
 
 
 ## Current state of development
-I have built a second prototype using the ESP32-C6 chip. Hardware, firmware, and enclosure design files are available in this repository but I need to update this README at some point ;)
+A working second prototype is built around the **ESP32-C6**. It joins any standard Zigbee coordinator (zigbee2mqtt, Home Assistant ZHA, deCONZ, …) as a mains-powered **Zigbee router** and controls bound smart lights with a single rotary knob. Hardware, firmware, and enclosure design files are all in this repository. It is a DIY prototype, not a finished product — see [Help wanted](#help-wanted).
+
+### Hardware
+- **ESP32-C6-MINI** module (Zigbee/Thread radio), programmed/powered over USB-C.
+- Integrated **230V → 5V** power supply (IRM-02-5S) plus a 3.3V regulator — no batteries, and it acts as a Zigbee router.
+- **Rotary encoder with push** (the single "big knob") for dimming and on/off.
+- **WS2812B RGB LED** for status/feedback.
+- On-board **230V relay** (on a normally-closed contact) to switch the connected lamp socket directly, with a dedicated button to toggle it.
+- A separate commissioning button for pairing / factory reset.
+- Designed to fit **Gira System 55** frames.
+
+### Controls
+| Input | Action |
+| ----- | ------ |
+| Rotate knob | Brightness up / down (bound lights) |
+| Push knob — short tap | Toggle on / off |
+| Push knob — hold | Off |
+| Push **and** rotate | Color temperature (warm / cool) |
+| Relay button — tap | Cut / restore the 230V outlet (works even with no network) |
+| Commission button — tap | Pair (start network steering) |
+| Commission button — hold ~5 s | Factory reset (yellow warning while holding, red on reset) |
+
+LED feedback: green = joined · solid red = not connected · white blink = command sent · red blink = command dropped (not joined) · blue blink = relay toggled · yellow = pairing / reset warning.
+
+### Firmware
+Built with **ESP-IDF** and the **esp-zigbee-sdk**. From `firmware/`:
+```
+idf.py set-target esp32c6
+idf.py build
+idf.py -p <PORT> flash monitor
+```
+After the first flash, firmware updates are delivered **over the air** (standard Zigbee OTA, with automatic rollback of a bad image). The single source of truth for the version is `firmware/main/version.h`.
+
+### Repository layout
+- `hardware/` — KiCad schematics, PCB, and exported gerbers/3D models.
+- `firmware/` — ESP-IDF project ([`firmware/docs/OTA.md`](firmware/docs/OTA.md), [`firmware/z2m/README.md`](firmware/z2m/README.md), `firmware/TODO.md`).
+- `enclosure/` — printable enclosure / knob design files.
 
 ## zigbee2mqtt integration & over-the-air updates
 The dimmer joins any standard Zigbee coordinator and exposes two endpoints: a **controller** (endpoint 1) that sends on/off, brightness and color commands to bound lights, and an on-board **230V relay** (endpoint 2) to switch the connected lamp socket directly. It also implements the standard Zigbee OTA Upgrade cluster, so firmware updates are delivered over the air. To add the device to zigbee2mqtt and receive OTA updates from this repo, follow [`firmware/z2m/README.md`](firmware/z2m/README.md). Firmware-side OTA details (partitioning, rollback) are in [`firmware/docs/OTA.md`](firmware/docs/OTA.md).
