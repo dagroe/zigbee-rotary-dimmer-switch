@@ -19,7 +19,7 @@ extern "C" {
  * ------------------------------------------------------------------------- */
 #define OTA_UPGRADE_MANUFACTURER   0x131B      /* 16-bit manufacturer code (Espressif default) */
 #define OTA_UPGRADE_IMAGE_TYPE     0x1010      /* product image type (manufacturer-specific) */
-#define OTA_UPGRADE_FILE_VERSION   0x01000000  /* running firmware version */
+#define OTA_UPGRADE_FILE_VERSION   0x01000003  /* running firmware version */
 #define OTA_UPGRADE_HW_VERSION     0x0101      /* board revision */
 
 /* Max ZCL OTA block payload the client requests (bytes). */
