@@ -154,8 +154,11 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 break;
             }
 
-            case SWITCH_LONG_RELEASE_DETECTED: {
-                // Long press release: send off only if encoder didn't rotate
+            case SWITCH_LONG_RELEASE_DETECTED:
+            case SWITCH_HOLD_RELEASE_DETECTED: {
+                // Released after any hold >=0.5s (both the 0.5-5s and >5s paths):
+                // send off if the encoder didn't rotate. Handling both releases
+                // removes the dead zone where a >5s hold used to do nothing.
                 bool rotated;
                 taskENTER_CRITICAL(&s_button_encoder_mux);
                 rotated = encoder_rotated_while_pressed;
@@ -191,17 +194,6 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
                 // Hold detected (button still held): no action needed, state stays
                 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "Hold detected, button still held");
-                #endif
-                break;
-
-            case SWITCH_HOLD_RELEASE_DETECTED:
-                // Hold release (after very long press): just clear button state
-                taskENTER_CRITICAL(&s_button_encoder_mux);
-                encoder_button_down = false;
-                encoder_rotated_while_pressed = false;
-                taskEXIT_CRITICAL(&s_button_encoder_mux);
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Hold release, encoder_button_down=false");
                 #endif
                 break;
 
