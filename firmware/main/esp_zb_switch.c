@@ -497,17 +497,22 @@ static void encoder_task(void *pvParameters) {
                     encoder_rotated_while_pressed = true;
                     taskEXIT_CRITICAL(&s_button_encoder_mux);
 
-                    // Send color/hue command
-                    esp_zb_zcl_color_step_hue_cmd_t cmd_req;
+                    // Push + rotate = color temperature (warm/cool). Works on
+                    // tunable-white bulbs; CW = warmer (higher mireds).
+                    esp_zb_zcl_color_step_color_temperature_cmd_t cmd_req;
                     cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
                     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                    cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? ZCL_STEP_MODE_UP : ZCL_STEP_MODE_DOWN;
-                    cmd_req.step_size = 5;
+                    cmd_req.move_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE
+                                        ? ESP_ZB_ZCL_CMD_COLOR_CONTROL_STEP_UP
+                                        : ESP_ZB_ZCL_CMD_COLOR_CONTROL_STEP_DOWN;
+                    cmd_req.step_size = 25;                  // mireds per detent
                     cmd_req.transition_time = 1;
+                    cmd_req.color_temperature_minimum = 153; // ~6500 K (cool)
+                    cmd_req.color_temperature_maximum = 500; // ~2000 K (warm)
                     #ifdef DEBUG_ENABLED
-                    ESP_LOGI(TAG, "Send 'color step' command (button held)");
+                    ESP_LOGI(TAG, "Send 'color temperature step' command (button held)");
                     #endif
-                    ZB_SEND_CMD(esp_zb_zcl_color_step_hue_cmd_req(&cmd_req));
+                    ZB_SEND_CMD(esp_zb_zcl_color_step_color_temperature_cmd_req(&cmd_req));
                 } else {
                     // Within debounce period - ignore this encoder event (likely noise from button press)
                     #ifdef DEBUG_ENABLED
