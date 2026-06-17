@@ -20,8 +20,6 @@ Items are roughly in priority order.
   with a "joined" flag (set on steering success, cleared on leave) — also lets
   the LED show a clear "not joined" state. Deferred because a wrong flag would
   make the device look dead; needs careful join/reboot-state handling.
-- [ ] **Derive `sw_build_version` from the build** instead of the hardcoded
-  date string in `device_config.c` (easy to forget to bump).
 - [ ] **Handle LED-strip init failure more gracefully.** If
   `led_strip_new_rmt_device` fails, `led_task` is never started and nothing
   drains `led_evt_queue`; senders use timeout 0 so it is harmless, but the
@@ -42,3 +40,5 @@ Items are roughly in priority order.
 - [x] Standard Zigbee OTA Upgrade client (download/apply; see `docs/OTA.md`)
 - [x] OTA rollback: image confirmed only after rejoining the network, else
       auto-reverts to the previous image
+- [x] Single-source firmware version (`main/version.h`) feeding OTA version,
+      SW Build ID, app version, and the .ota packaging tool

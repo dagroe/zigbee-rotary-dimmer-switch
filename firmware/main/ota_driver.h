@@ -2,25 +2,23 @@
 
 #include "esp_err.h"
 #include "esp_zigbee_core.h"
+#include "version.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* ---------------------------------------------------------------------------
- * OTA identity. These three values tie the running firmware to the .ota image
- * a coordinator (zigbee2mqtt, ZHA, deCONZ, ...) offers. The coordinator only
- * pushes an image whose header file_version is GREATER than the running
- * version, and whose manufacturer code + image type match exactly.
- *
- * On every release: bump OTA_UPGRADE_FILE_VERSION here AND build the .ota with
- * the same manufacturer/image-type and a matching (higher) version.
- * See firmware/docs/OTA.md.
+ * OTA identity. These tie the running firmware to the .ota image a coordinator
+ * (zigbee2mqtt, ZHA, deCONZ, ...) offers: it only pushes an image whose version
+ * is GREATER than the running one and whose manufacturer code + image type match
+ * exactly. The version comes from version.h (the single source) -- bump it there
+ * for a release, never here. See firmware/docs/OTA.md.
  * ------------------------------------------------------------------------- */
-#define OTA_UPGRADE_MANUFACTURER   0x131B      /* 16-bit manufacturer code (Espressif default) */
-#define OTA_UPGRADE_IMAGE_TYPE     0x1010      /* product image type (manufacturer-specific) */
-#define OTA_UPGRADE_FILE_VERSION   0x01000003  /* running firmware version */
-#define OTA_UPGRADE_HW_VERSION     0x0101      /* board revision */
+#define OTA_UPGRADE_MANUFACTURER   0x131B            /* 16-bit manufacturer code (Espressif default) */
+#define OTA_UPGRADE_IMAGE_TYPE     0x1010            /* product image type (manufacturer-specific) */
+#define OTA_UPGRADE_FILE_VERSION   FW_VERSION_OTA    /* running firmware version (from version.h) */
+#define OTA_UPGRADE_HW_VERSION     0x0101            /* board revision */
 
 /* Max ZCL OTA block payload the client requests (bytes). */
 #define OTA_UPGRADE_MAX_DATA_SIZE  223

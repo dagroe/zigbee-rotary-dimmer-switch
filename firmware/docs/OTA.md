@@ -10,30 +10,32 @@ this is vendor-specific — any compliant coordinator can update the device.
 
 A coordinator only offers an image when **all** of these hold:
 
-| Field             | Firmware source (`main/ota_driver.h`) | Default        |
+| Field             | Firmware source                       | Default        |
 | ----------------- | ------------------------------------- | -------------- |
-| Manufacturer code | `OTA_UPGRADE_MANUFACTURER`            | `0x131B` (4891)|
-| Image type        | `OTA_UPGRADE_IMAGE_TYPE`              | `0x1010` (4112)|
-| File version      | `OTA_UPGRADE_FILE_VERSION`            | `0x01000000`   |
+| Manufacturer code | `OTA_UPGRADE_MANUFACTURER` (`main/ota_driver.h`) | `0x131B` (4891)|
+| Image type        | `OTA_UPGRADE_IMAGE_TYPE` (`main/ota_driver.h`)   | `0x1010` (4112)|
+| File version      | `FW_VERSION_*` (`main/version.h`)     | `1.0.x` → `0x010000xx` |
 
 The image's header manufacturer code + image type must equal the firmware's, and
-its file version must be **greater** than the running `OTA_UPGRADE_FILE_VERSION`.
+its file version must be **greater** than the running version.
 
 ## Releasing an update
 
-1. Bump `OTA_UPGRADE_FILE_VERSION` in `main/ota_driver.h` (e.g. `0x01000000` →
-   `0x01000001`).
-2. Build normally: `idf.py build`. This produces `build/light_switch.bin`.
-3. Wrap that `.bin` in a Zigbee `.ota` container with `tools/make_ota.py`:
+The version lives in exactly one place — `main/version.h` — and feeds the OTA
+file version, the SW Build ID z2m shows, the ESP-IDF app version, and the `.ota`
+the packaging script produces.
+
+1. Bump `FW_VERSION_MAJOR/MINOR/PATCH` in `main/version.h` (e.g. `1.0.3` → `1.0.4`).
+2. `idf.py build` — produces `build/light_switch.bin`.
+3. Package the `.ota` (version/manufacturer/image-type are read from the headers,
+   so no numbers to pass):
 
    ```
-   python tools/make_ota.py --in build/light_switch.bin --out dimmer_v2.ota \
-       --manuf 0x131B --image-type 0x1010 --version 0x01000001
+   python tools/make_ota.py --in build/light_switch.bin --out dimmer.ota
    ```
 
-   The `--manuf`/`--image-type`/`--version` MUST match the `OTA_UPGRADE_*` defines
-   you compiled into that same build. The script prints the `fileVersion`,
-   `fileSize`, and `sha512` to drop into the z2m index below.
+   The script prints the `fileVersion`, `fileSize`, and `sha512` to drop into the
+   z2m index below.
 
 ## Serving it from zigbee2mqtt
 

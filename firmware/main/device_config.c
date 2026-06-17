@@ -3,13 +3,20 @@
 #include "ha/esp_zigbee_ha_standard.h"
 #include "device_config.h"
 #include "ota_driver.h"
+#include "version.h"
 
 char modelid[] = { 12, 'E','S','P','_','D','I','M','M','E','R','_','1' };
 char manufname[] = { 14, 'D','G',' ','E','l','e','c','t','r','o','n','i','c','s' };
-char sw_build_version[] = { 10, '2','0','2','5','1','0','1','9','T','1' };
+/* ZCL string ([len][chars...]); filled from FW_VERSION_STRING in configure_device. */
+char sw_build_version[16];
 
 void configure_device(void)
 {
+    /* Basic-cluster SW Build ID = the single-source firmware version string. */
+    size_t vlen = strlen(FW_VERSION_STRING);
+    sw_build_version[0] = (char)vlen;
+    memcpy(&sw_build_version[1], FW_VERSION_STRING, vlen);
+
     /* initialize Zigbee stack with Zigbee end-device config */
     esp_zb_cfg_t zb_nwk_cfg = ESP_ZB_ZC_CONFIG();
     esp_zb_init(&zb_nwk_cfg);
