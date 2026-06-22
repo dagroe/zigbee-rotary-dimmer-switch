@@ -233,7 +233,12 @@ static bool switch_driver_gpio_init(switch_func_pair_t *button_func_pair, uint8_
     io_conf.intr_type = GPIO_INTR_ANYEDGE;
     io_conf.pin_bit_mask = pin_bit_mask;
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pull_up_en = 0;
+    /* Enable the internal pull-up on every button input. The on-board buttons
+       already have external pull-ups (parallel internal pull-up is harmless),
+       but the external daughterboard ports (encoder button, wall switch) may
+       have nothing wired in: without a pull-up they would float and fire
+       phantom presses. With it, an unconnected input idles high = released. */
+    io_conf.pull_up_en = 1;
     io_conf.pull_down_en = 0;
     /* configure GPIO with the given settings */
     ESP_ERROR_CHECK(gpio_config(&io_conf));

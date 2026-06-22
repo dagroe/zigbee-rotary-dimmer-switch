@@ -16,8 +16,16 @@ with ZHA/deCONZ — they just consume `ota-index.json` differently.
 
 | Endpoint | Role | Use |
 | -------- | ---- | --- |
-| 1 (`controller`) | sends on/off, level (brightness) and color commands | Bind it to your light(s) via the device's **Bind** tab, or use the emitted commands in automations. |
+| 1 (`controller`) | on-board encoder/button: sends on/off, level (brightness) and color commands | Bind it to your light(s) via the device's **Bind** tab, or use the emitted commands in automations. |
 | 2 (`relay`) | on/off **output** for the on-board 230V relay | Switch the connected lamp socket directly (e.g. emergency cut-off) from HA/z2m. |
+| 3 (`ext_encoder`) | external encoder daughterboard: a **second dimmer** (on/off, level, color) | Bind it **independently** to a different light/group — so one in-wall module drives two dimmers. Unused if no board is connected. |
+| 4 (`ext_switch`) | external **wall switch**: plain on/off (toggle) controller | Bind it independently to its own light/group. Unused if no switch is connected. |
+
+> Endpoints 3 and 4 are always present. Because each endpoint is bound
+> separately, the external encoder and switch act as independent controllers
+> sharing the one device card — the closest a single Zigbee node gets to
+> "separate devices". If nothing is wired to the daughterboard ports, those
+> endpoints simply stay unbound and idle.
 
 ## Install (zigbee2mqtt users)
 
