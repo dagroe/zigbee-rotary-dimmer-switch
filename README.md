@@ -41,6 +41,7 @@ A working second prototype is built around the **ESP32-C6**. It joins any standa
 - **WS2812B RGB LED** for status/feedback.
 - On-board **230V relay** (on a normally-closed contact) to switch the connected lamp socket directly, with a dedicated button to toggle it.
 - A separate commissioning button for pairing / factory reset.
+- Two **external daughterboard ports** so the in-wall module can drive a second control surface: a port for an external rotary encoder (a second dimmer) and a port for a plain wall switch. Both are optional — when nothing is wired in they idle and stay unused.
 - Designed to fit **Gira System 55** frames.
 
 ### Controls
@@ -51,6 +52,8 @@ A working second prototype is built around the **ESP32-C6**. It joins any standa
 | Push knob — hold | Off |
 | Push **and** rotate | Color temperature (warm / cool) |
 | Relay button — tap | Cut / restore the 230V outlet (works even with no network) |
+| External encoder (optional) | Second, independently bindable dimmer — same controls as the knob |
+| External wall switch (optional) | Toggle on / off for its own independently bound light |
 | Commission button — tap | Pair (start network steering) |
 | Commission button — hold ~5 s | Factory reset (yellow warning while holding, red on reset) |
 
@@ -71,7 +74,7 @@ After the first flash, firmware updates are delivered **over the air** (standard
 - `enclosure/` — printable enclosure / knob design files.
 
 ## zigbee2mqtt integration & over-the-air updates
-The dimmer joins any standard Zigbee coordinator and exposes two endpoints: a **controller** (endpoint 1) that sends on/off, brightness and color commands to bound lights, and an on-board **230V relay** (endpoint 2) to switch the connected lamp socket directly. It also implements the standard Zigbee OTA Upgrade cluster, so firmware updates are delivered over the air. To add the device to zigbee2mqtt and receive OTA updates from this repo, follow [`firmware/z2m/README.md`](firmware/z2m/README.md). Firmware-side OTA details (partitioning, rollback) are in [`firmware/docs/OTA.md`](firmware/docs/OTA.md).
+The dimmer joins any standard Zigbee coordinator and exposes four endpoints: the on-board **controller** (endpoint 1) that sends on/off, brightness and color commands to bound lights, the on-board **230V relay** (endpoint 2) to switch the connected lamp socket directly, and the two optional daughterboard ports — an **external encoder** (endpoint 3, a second dimmer) and an **external wall switch** (endpoint 4). Each controller endpoint is bound independently, so they act as separate controllers sharing one device card. It also implements the standard Zigbee OTA Upgrade cluster, so firmware updates are delivered over the air. To add the device to zigbee2mqtt and receive OTA updates from this repo, follow [`firmware/z2m/README.md`](firmware/z2m/README.md). Firmware-side OTA details (partitioning, rollback) are in [`firmware/docs/OTA.md`](firmware/docs/OTA.md).
 
 ## Help wanted
 My prototype is working but I see a lot of potential for improvement. Since I am mostly a software engineer with limited knowledge of electronics, I am looking for other interested in taking this project further. You can find me on discord here: https://discord.gg/CjbDc5nPja or checkout the discussion here: https://community.home-assistant.io/t/diy-zigbee-rotary-wall-dimmer/681751

@@ -11,6 +11,43 @@ char manufname[] = { 14, 'D','G',' ','E','l','e','c','t','r','o','n','i','c','s'
 /* ZCL string ([len][chars...]); filled from FW_VERSION_STRING in configure_device. */
 char sw_build_version[16];
 
+/* Build a controller endpoint's cluster list: identify + on/off client, and
+   (for a full dimmer) level + color client clusters. These are CLIENT clusters
+   because the endpoint *commands* a bound light rather than holding state -- the
+   same shape as endpoint 1. Used for the external encoder (EP3, with_level_color
+   = true) and the external wall switch (EP4, on/off only). */
+static esp_zb_cluster_list_t *create_controller_cluster_list(bool with_level_color)
+{
+    esp_zb_identify_cluster_cfg_t identify_cfg = {
+        .identify_time = ESP_ZB_ZCL_IDENTIFY_IDENTIFY_TIME_DEFAULT_VALUE,
+    };
+    esp_zb_attribute_list_t *identify_cluster = esp_zb_identify_cluster_create(&identify_cfg);
+
+    esp_zb_on_off_cluster_cfg_t on_off_cfg = { .on_off = ESP_ZB_ZCL_ON_OFF_ON_OFF_DEFAULT_VALUE };
+    esp_zb_attribute_list_t *on_off_cluster = esp_zb_on_off_cluster_create(&on_off_cfg);
+
+    esp_zb_cluster_list_t *cluster_list = esp_zb_zcl_cluster_list_create();
+    esp_zb_cluster_list_add_identify_cluster(cluster_list, identify_cluster, ESP_ZB_ZCL_CLUSTER_SERVER_ROLE);
+    esp_zb_cluster_list_add_on_off_cluster(cluster_list, on_off_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
+
+    if (with_level_color) {
+        esp_zb_level_cluster_cfg_t level_cfg = { .current_level = ESP_ZB_ZCL_LEVEL_CONTROL_CURRENT_LEVEL_DEFAULT_VALUE };
+        esp_zb_attribute_list_t *level_cluster = esp_zb_level_cluster_create(&level_cfg);
+        esp_zb_cluster_list_add_level_cluster(cluster_list, level_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
+
+        esp_zb_color_cluster_cfg_t color_cfg;
+        color_cfg.current_x = ESP_ZB_ZCL_COLOR_CONTROL_CURRENT_X_DEF_VALUE;
+        color_cfg.current_y = ESP_ZB_ZCL_COLOR_CONTROL_CURRENT_Y_DEF_VALUE;
+        color_cfg.color_mode = ESP_ZB_ZCL_COLOR_CONTROL_COLOR_MODE_DEFAULT_VALUE;
+        color_cfg.options = ESP_ZB_ZCL_COLOR_CONTROL_OPTIONS_DEFAULT_VALUE;
+        color_cfg.enhanced_color_mode = ESP_ZB_ZCL_COLOR_CONTROL_ENHANCED_COLOR_MODE_DEFAULT_VALUE;
+        color_cfg.color_capabilities = ESP_ZB_ZCL_COLOR_CONTROL_COLOR_CAPABILITIES_DEFAULT_VALUE;
+        esp_zb_attribute_list_t *color_cluster = esp_zb_color_control_cluster_create(&color_cfg);
+        esp_zb_cluster_list_add_color_control_cluster(cluster_list, color_cluster, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
+    }
+    return cluster_list;
+}
+
 void configure_device(void)
 {
     /* Basic-cluster SW Build ID = the single-source firmware version string. */
@@ -128,6 +165,25 @@ void configure_device(void)
         .app_device_version = 0,
     };
     esp_zb_ep_list_add_ep(esp_zb_ep_list, relay_cluster_list, relay_endpoint_config);
+
+    /* Endpoint 3: external encoder daughterboard -- a second, independently
+       bindable dimmer controller (on/off + level + color), mirroring EP1. */
+    esp_zb_endpoint_config_t ext_encoder_endpoint_config = {
+        .endpoint = HA_EXT_ENCODER_ENDPOINT,
+        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+        .app_device_id = ESP_ZB_HA_ON_OFF_SWITCH_DEVICE_ID,
+        .app_device_version = 0,
+    };
+    esp_zb_ep_list_add_ep(esp_zb_ep_list, create_controller_cluster_list(true), ext_encoder_endpoint_config);
+
+    /* Endpoint 4: external wall switch -- a simple on/off controller. */
+    esp_zb_endpoint_config_t ext_switch_endpoint_config = {
+        .endpoint = HA_EXT_SWITCH_ENDPOINT,
+        .app_profile_id = ESP_ZB_AF_HA_PROFILE_ID,
+        .app_device_id = ESP_ZB_HA_ON_OFF_SWITCH_DEVICE_ID,
+        .app_device_version = 0,
+    };
+    esp_zb_ep_list_add_ep(esp_zb_ep_list, create_controller_cluster_list(false), ext_switch_endpoint_config);
 
     esp_zb_device_register(esp_zb_ep_list);
 }

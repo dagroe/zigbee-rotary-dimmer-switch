@@ -5,11 +5,12 @@ $fn=64;
 
 
 make_shaft = false;
-make_base_plate = false;
-make_thread = false;
-make_spacer = false;
-make_middle_spacer = false;
-build_bottom_shell = true;
+make_base_plate = true;
+make_base_plate_thread = false;
+make_thread = true;
+make_spacer = true;
+make_middle_spacer = true;
+build_bottom_shell = false;
 render_pcb = false;
 
 include <BOSL2/std.scad>
@@ -158,7 +159,7 @@ module my_model() {
             box_width = 1;
             box_height = dial_connector_length+overlap_top;
             
-            middle_radius = shaft_radius-0.6;
+            middle_radius = shaft_radius;
 
             union() {
                 translate([0,0,-overlap_bottom]) cylinder(h=thread_tunnel_length+overlap_top+overlap_bottom, r=middle_radius);
@@ -187,10 +188,10 @@ module my_model() {
     pcb_outline_svg_offset_x = 0.3;
     pcb_outline_svg_offset_y = -0.8;
 
-    side_thickness = 0.8;
+    side_thickness = 0.9;
         
     // socket adapter, thread tunnel cutout, and spacer
-    shaft_diameter = 7.0;
+    shaft_diameter = 6.0;
     shaft_radius = shaft_diameter / 2;
 
     offset_z = 2;
@@ -246,18 +247,56 @@ module my_model() {
     usb_cutout_recess_padding = 2.0;
     usb_cutout_recess_depth = 3.0;
     
-     // Caps to cover 230V pins on front side    
+    // Caps to cover 230V pins on front side   
+    space_between_plate_and_pcb = 11.0; 
     connector_pin_offset_x = 0.75;
     connector_pin_offset_y = -19.95+0.76;
     connector_pin_offset_z = -space_between_plate_and_pcb+1;
     connector_pin_radius = 1;
     connector_pin_height = 2.5;
+    
+    
+                
+    clearance = 0.1;
+    connector_radius = shaft_radius+4.0+0.1;
+    
+    if(make_base_plate_thread ) {
+    
+   
+    // Make inner thread adapter to be inserted from back of plate (so we can print both parts better)
+    color([1,0,0]) translate([0,0,base_plate_offset_z]) difference() {
+        union() {              
+        // reinforcement ring around bushing
+        translate([0,0,base_plate_thickness + reinforcement_ring_height/2]) cylinder(h=reinforcement_ring_height, r=connector_radius, center=true);
+        
+        // thread / bushing                
+        translate([0,0,height_thread_connector_including_base_plate-0.9]) threaded_rod(d=thread_diameter, l=top_rod_height+height_thread_connector_including_base_plate, pitch=thread_pitch, left_handed=false, blunt_start2=true, blunt_start1=false, $fa=5, $fs=5);
+        
+        // reinforcement ring around encoder
+        translate([0,0,-2.6]) cylinder(h=4.2, r=connector_radius);
+        
+        // ring that holds adapter behind base plate
+        translate([0,0,-2.6-2.0]) cylinder(h=4.2+2.0-base_plate_thickness, r=connector_radius+2.0);
+    }  
 
+
+    // hole for shaft in center
+    translate([0,0,10]) cylinder(h=60, r=(shaft_radius+clearance), center=true);
+
+    // hole for knob wrapper
+    translate([0,0,-3.4]) cylinder(h=11, r=shaft_radius+side_thickness+clearance);
+
+
+    // hole for encoder body
+    translate([0,0,-3.4]) cylinder(h=5, r=shaft_radius+0.7);             
+    }
+    }
+    
     if(make_base_plate) {
     
     
-
-         translate([0,0,base_plate_offset_z]) difference() {
+    // make base plate
+    translate([0,0,base_plate_offset_z]) difference() {
             union() {
                 // base plate with cutouts and hole for switch, LED, etc.
                
@@ -270,29 +309,7 @@ module my_model() {
                     translate([-12.3,-1.4,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
                     translate([-4.1,-11.0,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
                     translate([14.3,-3.4,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
-                    // hole for shaft in center
-                    translate([0,0,10]) cylinder(h=60, r=(thread_diameter/2+0.5), center=true);
                 }
-                
-                
-                
-                
-                // reinforcment ring around bushing
-                translate([0,0,base_plate_thickness + reinforcement_ring_height/2]) cylinder(h=reinforcement_ring_height, r=reinforcement_ring_radius, center=true);
-                
-                
-                // thread / bushing
-                /*
-                intersection() {
-                    translate([0,0,base_plate_thickness-height_thread_connector_including_base_plate]) linear_extrude(top_rod_height+height_thread_connector_including_base_plate) square([11,11], center=true);
-                    threaded_rod(d=thread_diameter, l=top_rod_height+30, pitch=thread_pitch, left_handed=false, blunt_start=false, $fa=5, $fs=5);
-                }
-                */
-                
-                translate([0,0,height_thread_connector_including_base_plate-0.9]) threaded_rod(d=thread_diameter, l=top_rod_height+height_thread_connector_including_base_plate, pitch=thread_pitch, left_handed=false, blunt_start2=true, blunt_start1=false, $fa=5, $fs=5);
-                
-                // reinforcement ring around encoder
-                translate([0,0,-2.6]) cylinder(h=4.2, r=shaft_radius+4.0+0.1);
                 
                 // connectors on base plate where shell can be fixed with screws                
                 difference() {
@@ -310,7 +327,6 @@ module my_model() {
 
 
                 // Make caps to cover 230V pins on front side
-                space_between_plate_and_pcb = 11.0;
                 
                 if(make_middle_spacer) {
                 
@@ -362,26 +378,20 @@ module my_model() {
                 translate([switch_cutout_offset_x-usb_cutout_recess_padding-1.0, switch_cutout_offset_y-usb_cutout_recess_padding-1.0, -base_plate_thickness]) linear_extrude(base_plate_thickness+2, center=true) make_rounded_rectangle(switch_cutout_width+usb_cutout_recess_padding*2+2, switch_cutout_depth+usb_cutout_recess_padding*2+2, 1);
                 
             }  
-  
-
-            // hole for shaft in center
-            translate([0,0,10]) cylinder(h=60, r=(shaft_radius-0.5+0.3), center=true);
             
-            // hole for knob wrapper
-            translate([0,0,-3.4]) cylinder(h=11, r=shaft_radius+0.5);
-            
-            
-            // hole for encoder body
-            translate([0,0,-3.4]) cylinder(h=5, r=shaft_radius+0.7); 
-           
+            // hole for adapter in center
+            translate([0,0,10]) cylinder(h=60, r=connector_radius+clearance, center=true);
           
             // recess for USB
             translate([switch_cutout_offset_x-usb_cutout_recess_padding, switch_cutout_offset_y-usb_cutout_recess_padding, base_plate_thickness+2-usb_cutout_recess_depth]) linear_extrude(base_plate_thickness+2, center=true) make_rounded_rectangle(switch_cutout_width+usb_cutout_recess_padding*2, switch_cutout_depth+usb_cutout_recess_padding*2, 2);
             // hole for USB
             translate([switch_cutout_offset_x, switch_cutout_offset_y, 0]) linear_extrude(base_plate_thickness+40, center=true) make_rounded_rectangle(switch_cutout_width, switch_cutout_depth, 1); 
+            
         }
     }
     
+
+    /*
     if(make_thread) {
         translate([0,0,base_plate_offset_z+0.0]) difference() {
             union() {           
@@ -399,7 +409,7 @@ module my_model() {
             }
             
             // hole for shaft in center
-            translate([0,0,10]) cylinder(h=60, r=(shaft_radius-0.5+0.2), center=true);
+            translate([0,0,10]) cylinder(h=60, r=(shaft_radius-0.5+0.2+0.5), center=true);
             
             // hole for knob wrapper
             translate([0,0,-3.4]) cylinder(h=11, r=shaft_radius+0.4);
@@ -410,6 +420,7 @@ module my_model() {
         }
     
     }
+    */
     
     bottom_shell_height = 29;
     bottom_shell_thickness = 1;
