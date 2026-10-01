@@ -1,15 +1,16 @@
 $fa = 1;
-$fs = 0.2;
-$fn=64;
+$fs = 0.25;
+//$fn=64;
 
 
 
 make_shaft = false;
-make_base_plate = true;
-make_base_plate_thread = false;
+make_base_plate = false;
+make_base_plate_thread = true;
 make_thread = true;
 make_spacer = true;
 make_middle_spacer = true;
+make_nut = false;
 build_bottom_shell = false;
 render_pcb = false;
 
@@ -255,43 +256,57 @@ module my_model() {
     connector_pin_radius = 1;
     connector_pin_height = 2.5;
     
-    
                 
-    clearance = 0.1;
+    clearance_moving_part = 0.1;
+    clearance_fixed_part = 0.04;
     connector_radius = shaft_radius+4.0+0.1;
+    
+    
+    // rect that holds adapter behind base plate
+    height_holder_rect = 6.0-base_plate_thickness;
+    width_holder_rect_x = 2 * connector_radius+2.0;
+    width_holder_rect_y = width_holder_rect_x;
     
     if(make_base_plate_thread ) {
     
    
     // Make inner thread adapter to be inserted from back of plate (so we can print both parts better)
+    
+    difference() {
+     
     color([1,0,0]) translate([0,0,base_plate_offset_z]) difference() {
         union() {              
         // reinforcement ring around bushing
-        translate([0,0,base_plate_thickness + reinforcement_ring_height/2]) cylinder(h=reinforcement_ring_height, r=connector_radius, center=true);
+        translate([0,0,base_plate_thickness+reinforcement_ring_height/2-base_plate_thickness/2-0.5]) cylinder(h=reinforcement_ring_height+base_plate_thickness+1, r=connector_radius, center=true);
         
         // thread / bushing                
-        translate([0,0,height_thread_connector_including_base_plate-0.9]) threaded_rod(d=thread_diameter, l=top_rod_height+height_thread_connector_including_base_plate, pitch=thread_pitch, left_handed=false, blunt_start2=true, blunt_start1=false, $fa=5, $fs=5);
+        translate([0,0,height_thread_connector_including_base_plate-0.9]) threaded_rod(d=thread_diameter, l=top_rod_height+height_thread_connector_including_base_plate, pitch=thread_pitch, left_handed=false, blunt_start2=true, blunt_start1=false, $slop=0.1);
         
         // reinforcement ring around encoder
-        translate([0,0,-2.6]) cylinder(h=4.2, r=connector_radius);
         
-        // ring that holds adapter behind base plate
-        translate([0,0,-2.6-2.0]) cylinder(h=4.2+2.0-base_plate_thickness, r=connector_radius+2.0);
+        //translate([0,0,-2.6]) cylinder(h=4.2, r=connector_radius);
+        
+        // rect that holds adapter behind base plate
+        translate([-width_holder_rect_x/2,-width_holder_rect_y/2,-height_holder_rect]) linear_extrude(height_holder_rect) square([width_holder_rect_x,width_holder_rect_y]);
     }  
 
 
     // hole for shaft in center
-    translate([0,0,10]) cylinder(h=60, r=(shaft_radius+clearance), center=true);
+    translate([0,0,10]) cylinder(h=60, r=(shaft_radius+clearance_moving_part), center=true);
 
-    // hole for knob wrapper
-    translate([0,0,-3.4]) cylinder(h=11, r=shaft_radius+side_thickness+clearance);
+    // hole for knob wrapper and encoder body (encoder is narrower than knob wrapper)
+    translate([0,0,-13.4]) cylinder(h=21, r=shaft_radius+side_thickness+clearance_moving_part);
 
-
-    // hole for encoder body
-    translate([0,0,-3.4]) cylinder(h=5, r=shaft_radius+0.7);             
+            
+    }
+        // TODO uncomment for cross section
+        //translate([-400,0,-400]) linear_extrude(h=800) square([800,400]);
     }
     }
     
+    if(make_nut) {
+        translate([0,0,5]) threaded_nut(nutwidth=14, id=thread_diameter, h=3, pitch=thread_pitch, left_handed=false, blunt_start=false, bevel=false, $slop=0.1);
+    }
     if(make_base_plate) {
     
     
@@ -299,28 +314,23 @@ module my_model() {
     translate([0,0,base_plate_offset_z]) difference() {
             union() {
                 // base plate with cutouts and hole for switch, LED, etc.
-               
-               difference() {
-                    base_plate(base_plate_thickness, base_plate_width_and_depth, base_plate_corner_radius, offset_base_plate);
-                    //translate([-12,4.7,5-0.5]) cylinder(h=10, r=2, center=true);
+                base_plate(base_plate_thickness, base_plate_width_and_depth, base_plate_corner_radius, offset_base_plate);
+                
+                difference() {
+                extra_width_holder_rect_holder_x = 27.0;
+                extra_width_holder_rect_holder_y = 6.0;
+                width_holder_rect_holder_x = width_holder_rect_x + extra_width_holder_rect_holder_x;
+                width_holder_rect_holder_y = width_holder_rect_y + extra_width_holder_rect_holder_y;
                     
-                    // subtract cutout for buttons
-                    
-                    translate([-12.3,-1.4,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
-                    translate([-4.1,-11.0,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
-                    translate([14.3,-3.4,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
+        translate([-width_holder_rect_holder_x/2,-width_holder_rect_holder_y/2,-height_holder_rect]) linear_extrude(height_holder_rect) square([width_holder_rect_holder_x,width_holder_rect_holder_y]);
+        
+        translate([-(width_holder_rect_x+clearance_fixed_part)/2,-(width_holder_rect_y+clearance_fixed_part)/2,-height_holder_rect-1]) linear_extrude(height_holder_rect+2) square([width_holder_rect_x+clearance_fixed_part*2,width_holder_rect_y+clearance_fixed_part*2]);
                 }
+          
                 
                 // connectors on base plate where shell can be fixed with screws                
-                difference() {
-                    translate([20.98,0,-shell_connector_height]) linear_extrude(shell_connector_height+base_plate_thickness) square([shell_connector_width,shell_connector_depth], center=true);
-                    translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
-                }
-                
-                difference() {
-                    translate([-20.38,0,-shell_connector_height]) linear_extrude(shell_connector_height+base_plate_thickness) square([shell_connector_width,shell_connector_depth], center=true);
-                    translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
-                }
+                translate([20.98,0,-shell_connector_height]) linear_extrude(shell_connector_height+base_plate_thickness) square([shell_connector_width,shell_connector_depth], center=true);
+                translate([-20.38,0,-shell_connector_height]) linear_extrude(shell_connector_height+base_plate_thickness) square([shell_connector_width,shell_connector_depth], center=true);
                 
                 // inside thread
                 //translate([0,0,-0.4]) threaded_nut(nutwidth=16, id=thread_diameter, h=height_thread_connector_including_base_plate, pitch=thread_pitch, shape="square", bevel=false, blunt_start=false, $slop=0.05, $fa=1, $fs=1);   
@@ -380,17 +390,31 @@ module my_model() {
             }  
             
             // hole for adapter in center
-            translate([0,0,10]) cylinder(h=60, r=connector_radius+clearance, center=true);
+            translate([0,0,10]) cylinder(h=60, r=connector_radius+clearance_fixed_part, center=true);
           
             // recess for USB
             translate([switch_cutout_offset_x-usb_cutout_recess_padding, switch_cutout_offset_y-usb_cutout_recess_padding, base_plate_thickness+2-usb_cutout_recess_depth]) linear_extrude(base_plate_thickness+2, center=true) make_rounded_rectangle(switch_cutout_width+usb_cutout_recess_padding*2, switch_cutout_depth+usb_cutout_recess_padding*2, 2);
             // hole for USB
             translate([switch_cutout_offset_x, switch_cutout_offset_y, 0]) linear_extrude(base_plate_thickness+40, center=true) make_rounded_rectangle(switch_cutout_width, switch_cutout_depth, 1); 
             
+            
+            // subtract cutout for buttons          
+            translate([-12.3,-1.4,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
+            translate([-4.1,-11.0,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
+            translate([14.3,-3.4,0]) cylinder(h=10, r=button_hole_diameter/2, center=true);
+            
+            // holes for screws in side connectors
+            translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-60]) cylinder(r=shell_side_screw_diameter/2, h=120);
         }
+        
+        
+        
     }
     
-
+    
+    
+    
+    
     /*
     if(make_thread) {
         translate([0,0,base_plate_offset_z+0.0]) difference() {
