@@ -5,14 +5,18 @@ $fs = 0.25;
 
 
 make_shaft = false;
+shaft_print_orientation = true; // printed shaft upside down at the origin (knurl bore opens upwards, no support needed); false = assembly position
 make_base_plate = false;
-make_base_plate_thread = true;
-make_thread = true;
-make_spacer = true;
-make_middle_spacer = true;
+make_base_plate_thread = false;
+make_thread = false;
+make_spacer = false;
+make_middle_spacer = false;
 make_nut = false;
-build_bottom_shell = false;
+build_bottom_shell = true;
+make_bottom_shell_labels = false; // only the L/N label inlays of the bottom shell, export as a second STL for a different AMS color
 render_pcb = false;
+render_encoder = false;
+render_main_model = true; // set to false when this file is included by another file
 
 include <BOSL2/std.scad>
 include <BOSL2/threading.scad>
@@ -43,7 +47,43 @@ translate([-180,0,-1]) linear_extrude(22) polygon(points=points, paths=paths);
 }
 */
 
-module my_model() {
+// thread_length_above_base_plate: how far the M10 thread sticks out in front of the base plate
+// thread_part_label: optional text engraved into the side of the thread part, e.g. for test prints
+module my_model(thread_length_above_base_plate=9.0, thread_part_label="") {
+
+    // ----- Encoder and printed shaft -----
+    // Bourns PEC11S (SMD), L1 = 9.5 version: fixed bushing, then a short rotating shaft with a slotted knurl on top
+    pec11s_z_offset = 0.4;                 // encoder sits this much above the PCB top
+    pec11s_body_width = 12.5;
+    pec11s_body_height = 4.5;              // measured
+    pec11s_shaft_length_above_body = 9.5;  // L1, fixed bushing + rotating shaft
+    pec11s_bushing_diameter = 7.0;         // fixed, does not rotate
+    pec11s_bushing_length = 5.0;           // LB
+    pec11s_neck_diameter = 4.5;            // rotating part between bushing and knurl, estimated from the drawing
+    pec11s_knurl_diameter = 6.0;           // 18 teeth
+    pec11s_knurl_length = 2.7;             // L2
+    pec11s_slot_width = 1.0;
+    pec11s_slot_depth = 1.6;
+
+    // printed shaft (SocketAdapter): sleeve pressed onto the knurled encoder shaft, shaft runs through the thread to the knob
+    knurl_bore = 5.8;                      // press fit on the 6 mm knurl
+    adapter_encoder_gap = 0.5;             // between sleeve and the fixed encoder bushing
+    encoder_bushing_clearance = 0.4;       // radial, around the fixed encoder bushing (SMD placement tolerance)
+    adapter_key_clearance = 0.05;          // per side between key and encoder shaft slot
+    adapter_key_width = pec11s_slot_width - 2*adapter_key_clearance;
+    adapter_web_thickness = 1.0;           // closed top of the knurl bore, part of the round shaft above the sleeve
+    adapter_axial_clearance = 0.2;         // between sleeve and the step in the thread bore
+    adapter_sleeve_bore_extra_height = 2.0; // sleeve bore reaches this much higher, found by test fitting
+    printed_shaft_diameter = 6.0;
+    printed_shaft_tip_above_thread = 4.0;  // tip of the knob connector beyond the end of the thread
+
+    // knob connector on top of the printed shaft, same as the old printed shaft
+    knob_connector_length = 4.7;
+    knob_connector_cross_width = 1.0;
+    knob_connector_cross_span = printed_shaft_diameter - 0.1;
+    knob_connector_core_diameter = 4.1;
+
+    cut_overlap = 0.01;                    // makes cuts extend past coplanar faces
 
     // function for rounded rectangle
     module make_rounded_rectangle(width, height, radius) {
@@ -94,112 +134,70 @@ module my_model() {
         }
     }
 
-    // socket adapter
-    module SocketAdapter(side_thickness=1.0, shaft_radius=3.0, offset_z=0) {
+    // socket adapter: printed shaft, sleeve pressed onto the knurled encoder shaft, runs through the thread to the knob
+    module SocketAdapter(side_thickness=1.0, offset_z=0) {
+        sleeve_diameter = knurl_bore + 2*side_thickness;
 
-        // ----- Parameters -----
-        top_thickness       = 0.5;
-        groove_margin       = 0.10;
-        height              = 4 + 0.2; // knob height + margin
-        thread_tunnel_margin= 0.2;
-        thread_tunnel_length= 3.5;
-        dial_connector_length = 4.2;
-        margin_from_knob    = 0.2;
-        overlap_bottom      = 0.1;
-        knob_radius         = 3.0;
-
-        // ----- Inner cutout -----
-        module knob_socket_make_inner_cutout(knob_radius, margin_from_knob, height) {
-            outer_r = knob_radius + margin_from_knob;
-            inner_r = outer_r - 0.5;
-            n = 36; // 2*18
-            pts = [
-                for (i = [0:n-1]) 
-                    let (a = 360/n * i)
-                    [(i % 2 == 0 ? inner_r : outer_r) * cos(a),
-                     (i % 2 == 0 ? inner_r : outer_r) * sin(a)]
-            ];
-            linear_extrude(height)
-                polygon(points=pts);
-        }
-
-        // ----- Outer shell -----
-        module knob_socket_make_outer_shell(knob_radius, side_thickness, top_thickness, height) {
+        translate([0,0,offset_z]) {
+            // sleeve on the knurled encoder shaft
             difference() {
-                cylinder(r=knob_radius+side_thickness, h=height+top_thickness, $fn=72);
+                cylinder(d=sleeve_diameter, h=adapter_sleeve_height);
+                translate([0,0,-cut_overlap]) cylinder(d=knurl_bore, h=adapter_knurl_depth+cut_overlap);
+            }
+
+            // key engaging the slot in the encoder shaft
+            translate([0,0,adapter_knurl_depth-adapter_key_height/2+cut_overlap/2]) cube([knurl_bore, adapter_key_width, adapter_key_height+cut_overlap], center=true);
+
+            // 45 degree chamfer from sleeve to shaft, so the sleeve does not overhang when printed upside down
+            translate([0,0,adapter_sleeve_height-cut_overlap]) cylinder(d1=sleeve_diameter, d2=printed_shaft_diameter, h=adapter_sleeve_chamfer_height+cut_overlap);
+
+            // round shaft through the thread, ends in a 45 degree chamfer down to the knob connector core
+            translate([0,0,adapter_sleeve_height-cut_overlap]) cylinder(d=printed_shaft_diameter, h=adapter_shaft_round_length-knob_connector_chamfer_height+cut_overlap);
+            translate([0,0,adapter_sleeve_height+adapter_shaft_round_length-knob_connector_chamfer_height-cut_overlap])
+                cylinder(d1=printed_shaft_diameter, d2=knob_connector_core_diameter, h=knob_connector_chamfer_height+2*cut_overlap);
+
+            // knob connector: cross with round core; the arms continue through the chamfer into the full shaft,
+            // so they carry the chamfer when printed upside down
+            translate([0,0,adapter_sleeve_height+adapter_shaft_round_length-cut_overlap]) {
+                cross_height = knob_connector_length + knob_connector_chamfer_height + cut_overlap;
+                translate([0,0,knob_connector_length+cut_overlap-cross_height/2]) cube([knob_connector_cross_width, knob_connector_cross_span, cross_height], center=true);
+                translate([0,0,knob_connector_length+cut_overlap-cross_height/2]) cube([knob_connector_cross_span, knob_connector_cross_width, cross_height], center=true);
+                cylinder(d=knob_connector_core_diameter, h=knob_connector_length+cut_overlap);
             }
         }
-
-        // ----- Groove -----
-        module knob_socket_make_groove(shaft_radius, groove_width, groove_height, height) {
-            width = shaft_radius*2-0.2;
-            translate([-width/2, -groove_width/2, height-groove_height])
-                cube([width, groove_width, groove_height], center=false);
-        }
-
-        // ----- Knob socket -----
-        module make_knob_socket(knob_radius, shaft_radius, margin_from_knob, side_thickness, top_thickness, groove_margin, height) {
-            groove_width  = 1 - groove_margin;
-            groove_height = 1.6;
-            
-            union() {
-                difference() {
-                    knob_socket_make_outer_shell(knob_radius, side_thickness, top_thickness, height);
-                    translate([0,0, -1]) knob_socket_make_inner_cutout(knob_radius, margin_from_knob, height + 1);
-                }
-                knob_socket_make_groove(shaft_radius, groove_width, groove_height, height);
-            }
-            
-        }
-
-        // ----- Shaft -----
-        module make_shaft(height, top_thickness, shaft_radius, thread_tunnel_length, dial_connector_length, overlap_bottom) {
-            overlap_top = 0.5;
-
-            // Cross boxes
-            box_width = 1;
-            box_height = dial_connector_length+overlap_top;
-            
-            middle_radius = shaft_radius;
-
-            union() {
-                translate([0,0,-overlap_bottom]) cylinder(h=thread_tunnel_length+overlap_top+overlap_bottom, r=middle_radius);
-                translate([0,0,thread_tunnel_length])
-                union() {
-                    translate([0,0,box_height/2]) cube([box_width, middle_radius*2 - 0.1, box_height], center=true);
-                    translate([0,0,box_height/2]) cube([middle_radius*2 - 0.1, box_width, box_height], center=true);
-                    cylinder(r=2.05, h=dial_connector_length+overlap_top);
-               };
-            }
-            
-        }
-        
-
-
-        // ----- Build adapter -----
-        translate([0,0, offset_z - (height + top_thickness)])
-            union() {
-                make_knob_socket(knob_radius, shaft_radius, margin_from_knob, side_thickness, top_thickness, groove_margin, height);
-                translate([0,0,height+top_thickness-overlap_bottom])
-                     make_shaft(height, top_thickness, shaft_radius, thread_tunnel_length, dial_connector_length, overlap_bottom);
-            }
-            
     }
 
     pcb_outline_svg_offset_x = 0.3;
     pcb_outline_svg_offset_y = -0.8;
 
-    side_thickness = 0.9;
-        
-    // socket adapter, thread tunnel cutout, and spacer
-    shaft_diameter = 6.0;
-    shaft_radius = shaft_diameter / 2;
+    // wall of the sleeve around the knurl bore
+    side_thickness = 0.6;
 
-    offset_z = 2;
+    // printed shaft dimensions
+    adapter_sleeve_diameter = knurl_bore + 2*side_thickness;
+    adapter_knurl_depth = pec11s_shaft_length_above_body - pec11s_bushing_length - adapter_encoder_gap;
+    adapter_key_height = pec11s_slot_depth - adapter_axial_clearance;
+    adapter_sleeve_height = adapter_knurl_depth; // sleeve ends at the knurl tip, keeps it short inside the thread
+    adapter_sleeve_chamfer_height = (adapter_sleeve_diameter - printed_shaft_diameter)/2;          // 45 degrees
+    knob_connector_chamfer_height = (printed_shaft_diameter - knob_connector_core_diameter)/2;     // 45 degrees
 
     if (make_shaft) {
-        color([1,0,0]) translate([0,0,-1.5]) SocketAdapter(side_thickness, shaft_radius, offset_z);
-        
+        if (shaft_print_orientation)
+            color([1,0,0]) translate([0,0,adapter_total_length]) rotate([180,0,0]) SocketAdapter(side_thickness, 0);
+        else
+            color([1,0,0]) SocketAdapter(side_thickness, adapter_z);
+    }
+
+    if (render_encoder) {
+        color([0.3,0.3,0.3]) translate([0,0,encoder_bottom_z]) {
+            translate([0,0,pec11s_body_height/2]) cube([pec11s_body_width, pec11s_body_width, pec11s_body_height], center=true);
+            cylinder(d=pec11s_bushing_diameter, h=pec11s_body_height+pec11s_bushing_length);
+            cylinder(d=pec11s_neck_diameter, h=pec11s_body_height+pec11s_shaft_length_above_body);
+            translate([0,0,pec11s_body_height+pec11s_shaft_length_above_body-pec11s_knurl_length]) difference() {
+                cylinder(d=pec11s_knurl_diameter, h=pec11s_knurl_length);
+                translate([0,0,pec11s_knurl_length-pec11s_slot_depth+pec11s_slot_depth/2]) cube([pec11s_knurl_diameter+1, pec11s_slot_width, pec11s_slot_depth+cut_overlap], center=true);
+            }
+        }
     }
 
 
@@ -214,7 +212,6 @@ module my_model() {
 
     offset_base_plate = 0;//shell_height - shell_bottom_thickness - base_plate_thickness;
 
-    top_rod_height = 7;
 
     reinforcement_ring_diameter = 14;
     reinforcement_ring_radius = reinforcement_ring_diameter / 2;
@@ -227,8 +224,13 @@ module my_model() {
 
     // shaft adapter
 
-    thread_pitch = 1;
+    thread_pitch = 1; // M10x1 (fine), thicker core than M10x1.5 for the bores inside
     thread_diameter = 10;
+    thread_fit = -0.2;      // on the diameter of the printed outer thread, negative = looser fit in the nut
+
+    // lock nut M10x1 DIN 13-5 (zinc plated steel)
+    nut_width_across_flats = 12;
+    nut_height = 3;
     
     height_thread_connector_including_base_plate = 4.0;
     
@@ -236,7 +238,9 @@ module my_model() {
     shell_connector_height = 4.6;
     shell_connector_width = 3.0;
     shell_connector_depth = 16.0;
-    shell_side_screw_diameter = 1.5;
+    shell_side_screw_diameter = 1.5;            // core hole in the base plate connectors for 2.0 mm self-tapping screws
+    shell_side_screw_clearance_diameter = 2.2;  // through hole in the bottom shell, so the screw pulls the shell tight
+    pcb_screw_core_diameter = 1.7;              // core hole in the PCB pillars for M2 screws
     
     button_hole_diameter = 3.0;
     
@@ -258,14 +262,63 @@ module my_model() {
     
                 
     clearance_moving_part = 0.1;
+    printed_shaft_clearance = 0.15; // radial, printed shaft in the printed bore of the thread (FDM holes come out undersized)
+    adapter_sleeve_clearance = 0.3;  // radial, sleeve of the printed shaft in the thread part (only guided by the shaft bore above)
     clearance_fixed_part = 0.04;
-    connector_radius = shaft_radius+4.0+0.1;
+    connector_radius = 7.1; // outer radius of the thread part where it sits in the base plate (fixed, base plate must keep fitting)
     
     
     // rect that holds adapter behind base plate
     height_holder_rect = 6.0-base_plate_thickness;
     width_holder_rect_x = 2 * connector_radius+2.0;
     width_holder_rect_y = width_holder_rect_x;
+
+    // axial layout of the thread part (z relative to base_plate_offset_z)
+    reinforcement_ring_center_z = base_plate_thickness+reinforcement_ring_height/2-base_plate_thickness/2-0.5;
+    reinforcement_ring_total_height = reinforcement_ring_height+base_plate_thickness+1;
+    reinforcement_ring_top_z = reinforcement_ring_center_z + reinforcement_ring_total_height/2;
+    thread_rod_bottom_z = -2.4; // start of the thread inside the reinforcement ring
+    thread_top_z = base_plate_thickness + thread_length_above_base_plate;
+    thread_rod_length = thread_top_z - thread_rod_bottom_z;
+    thread_rod_center_z = (thread_rod_bottom_z + thread_top_z)/2;
+
+    // engraved label on the side of the rect that holds the thread part behind the base plate
+    thread_part_label_size = 2.5;
+    thread_part_label_depth = 0.4;
+    thread_part_bottom_z = -height_holder_rect;
+    thread_minor_diameter = thread_diameter + thread_fit - 1.226869*thread_pitch; // ISO external thread core, 8.77 for M10x1 without fit
+
+    // printed shaft position in the assembly (absolute z), sitting on the encoder shaft
+    pcb_top_z = base_plate_offset_z + connector_pin_offset_z;
+    encoder_bottom_z = pcb_top_z + pec11s_z_offset;
+    encoder_bushing_top_z = encoder_bottom_z + pec11s_body_height + pec11s_bushing_length;
+    adapter_z = encoder_bushing_top_z + adapter_encoder_gap;
+    adapter_sleeve_top_z = adapter_z + adapter_sleeve_height - base_plate_offset_z; // relative to thread part
+    adapter_shaft_round_length = (base_plate_offset_z + thread_top_z + printed_shaft_tip_above_thread - knob_connector_length) - (adapter_z + adapter_sleeve_height);
+    adapter_total_length = adapter_sleeve_height + adapter_shaft_round_length + knob_connector_length;
+
+    // bores in the thread part for the rotating shaft: wide for the sleeve, narrow for the round shaft
+    adapter_sleeve_bore_diameter = adapter_sleeve_diameter + 2*adapter_sleeve_clearance;
+    adapter_sleeve_bore_top_z = adapter_sleeve_top_z + adapter_axial_clearance + adapter_sleeve_bore_extra_height;
+    printed_shaft_bore_diameter = printed_shaft_diameter + 2*printed_shaft_clearance;
+
+    // hole for the fixed encoder bushing and the sleeve, from the PCB up to the thread part
+    encoder_body_bore_diameter = max(pec11s_bushing_diameter + 2*encoder_bushing_clearance, adapter_sleeve_bore_diameter);
+    encoder_body_bore_top_z = min(reinforcement_ring_top_z, adapter_sleeve_bore_top_z); // wide bore only where the wall is thick
+    encoder_body_bore_bottom_z = connector_pin_offset_z; // PCB top
+
+    // wall thickness checks
+    sleeve_bore_wall = (adapter_sleeve_bore_top_z > reinforcement_ring_top_z ? thread_minor_diameter/2 : connector_radius) - adapter_sleeve_bore_diameter/2;
+    shaft_bore_wall = (thread_minor_diameter - printed_shaft_bore_diameter)/2;
+    echo(str("Printed shaft: sleeve d=", adapter_sleeve_diameter, " h=", adapter_sleeve_height, ", knurl bore ", knurl_bore, " x ", adapter_knurl_depth,
+             " deep, key ", adapter_key_width, " x ", adapter_key_height, ", shaft d=", printed_shaft_diameter, ", total length ", adapter_total_length, " mm"));
+    echo(str("Sleeve bore: d=", adapter_sleeve_bore_diameter, " up to z=", adapter_sleeve_bore_top_z, ", wall to thread core (", thread_minor_diameter, "): ", sleeve_bore_wall, " mm"));
+    echo(str("Shaft bore: d=", printed_shaft_bore_diameter, " up to z=", thread_top_z, ", wall to thread core ", shaft_bore_wall, " mm"));
+    echo(str("Encoder body bore: d=", encoder_body_bore_diameter, " up to z=", encoder_body_bore_top_z, ", fixed encoder bushing reaches ", encoder_bushing_top_z - base_plate_offset_z - thread_part_bottom_z, " mm into the thread part"));
+    assert(adapter_knurl_depth > 0, "encoder shaft too short for the printed shaft");
+    assert(adapter_sleeve_bore_top_z < thread_top_z, "sleeve reaches beyond the end of the thread");
+    assert(adapter_shaft_round_length >= adapter_web_thickness, "no room for the closed top of the knurl bore");
+    assert(adapter_shaft_round_length >= adapter_sleeve_chamfer_height + knob_connector_chamfer_height, "printed shaft too short for its chamfers");
     
     if(make_base_plate_thread ) {
     
@@ -277,10 +330,10 @@ module my_model() {
     color([1,0,0]) translate([0,0,base_plate_offset_z]) difference() {
         union() {              
         // reinforcement ring around bushing
-        translate([0,0,base_plate_thickness+reinforcement_ring_height/2-base_plate_thickness/2-0.5]) cylinder(h=reinforcement_ring_height+base_plate_thickness+1, r=connector_radius, center=true);
+        translate([0,0,reinforcement_ring_center_z]) cylinder(h=reinforcement_ring_total_height, r=connector_radius, center=true);
         
         // thread / bushing                
-        translate([0,0,height_thread_connector_including_base_plate-0.9]) threaded_rod(d=thread_diameter, l=top_rod_height+height_thread_connector_including_base_plate, pitch=thread_pitch, left_handed=false, blunt_start2=true, blunt_start1=false, $slop=0.1);
+        translate([0,0,thread_rod_center_z]) threaded_rod(d=thread_diameter+thread_fit, l=thread_rod_length, pitch=thread_pitch, left_handed=false, blunt_start2=true, blunt_start1=false, $slop=0.1);
         
         // reinforcement ring around encoder
         
@@ -291,11 +344,20 @@ module my_model() {
     }  
 
 
-    // hole for shaft in center
-    translate([0,0,10]) cylinder(h=60, r=(shaft_radius+clearance_moving_part), center=true);
+    // bores for the rotating printed shaft
+    translate([0,0,thread_part_bottom_z-cut_overlap]) cylinder(h=encoder_body_bore_top_z-thread_part_bottom_z+cut_overlap, d=encoder_body_bore_diameter);
+    translate([0,0,encoder_body_bore_top_z-cut_overlap]) cylinder(h=(encoder_body_bore_diameter-adapter_sleeve_bore_diameter)/2+cut_overlap, d1=encoder_body_bore_diameter, d2=adapter_sleeve_bore_diameter); // 45 degrees, no flat overhang
+    translate([0,0,encoder_body_bore_top_z-cut_overlap]) cylinder(h=adapter_sleeve_bore_top_z-encoder_body_bore_top_z+cut_overlap, d=adapter_sleeve_bore_diameter);
+    translate([0,0,adapter_sleeve_bore_top_z-cut_overlap]) cylinder(h=(adapter_sleeve_bore_diameter-printed_shaft_bore_diameter)/2+cut_overlap, d1=adapter_sleeve_bore_diameter, d2=printed_shaft_bore_diameter); // 45 degrees, matches the shaft chamfer
+    translate([0,0,adapter_sleeve_bore_top_z-cut_overlap]) cylinder(h=thread_top_z-adapter_sleeve_bore_top_z+2*cut_overlap, d=printed_shaft_bore_diameter);
 
-    // hole for knob wrapper and encoder body (encoder is narrower than knob wrapper)
-    translate([0,0,-13.4]) cylinder(h=21, r=shaft_radius+side_thickness+clearance_moving_part);
+    // hole for encoder body and sleeve
+    translate([0,0,encoder_body_bore_bottom_z]) cylinder(h=thread_part_bottom_z-encoder_body_bore_bottom_z, d=encoder_body_bore_diameter);
+
+    // label on the side
+    if (thread_part_label != "")
+        translate([0,-width_holder_rect_y/2+thread_part_label_depth,-height_holder_rect/2]) rotate([90,0,0]) linear_extrude(thread_part_label_depth+cut_overlap)
+            text(thread_part_label, size=thread_part_label_size, halign="center", valign="center");
 
             
     }
@@ -305,7 +367,7 @@ module my_model() {
     }
     
     if(make_nut) {
-        translate([0,0,5]) threaded_nut(nutwidth=14, id=thread_diameter, h=3, pitch=thread_pitch, left_handed=false, blunt_start=false, bevel=false, $slop=0.1);
+        translate([0,0,5]) threaded_nut(nutwidth=nut_width_across_flats, id=thread_diameter, h=nut_height, pitch=thread_pitch, left_handed=false, blunt_start=false, bevel=false, $slop=0.1);
     }
     if(make_base_plate) {
     
@@ -364,7 +426,7 @@ module my_model() {
                             }
                             translate([18.56,-10.52,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
                         }
-                        translate([18.56,-10.52,connector_pin_offset_z-1]) cylinder(h=10,r=1);
+                        translate([18.56,-10.52,connector_pin_offset_z-1]) cylinder(h=10,d=pcb_screw_core_diameter);
                     }
                     
                     
@@ -377,7 +439,7 @@ module my_model() {
                             }
                             translate([-16.65,16.54,connector_pin_offset_z]) cylinder(h=space_between_plate_and_pcb,r=2);
                         }
-                        translate([-16.65,16.54,connector_pin_offset_z-1]) cylinder(h=10,r=1);
+                        translate([-16.65,16.54,connector_pin_offset_z-1]) cylinder(h=10,d=pcb_screw_core_diameter);
                     }
                     
                     
@@ -448,6 +510,25 @@ module my_model() {
     
     bottom_shell_height = 29;
     bottom_shell_thickness = 1;
+    bottom_shell_bottom_z = -bottom_shell_height-7;
+
+    // labels for the power terminal on the outside of the bottom shell floor, inlaid flush so they can be printed in a
+    // different color (two STLs, loaded in Bambu Studio as one object with two parts)
+    power_connector_hole_pitch = 5.0;
+    power_connector_labels = ["L'", "L", "N"]; // left to right seen from the top: relay output, live, neutral
+    power_connector_label_size = 3.0;
+    power_connector_label_depth = 0.4;          // two layers at 0.2, floor is bottom_shell_thickness
+    power_connector_label_y = connector_pin_offset_y + 4.7; // above the holes, between them and the board center
+    power_connector_label_font = "Liberation Sans:style=Bold";
+
+    module power_connector_labels(extra_depth=0) {
+        for (i=[-1:1:1]) {
+            translate([0.7 + i * power_connector_hole_pitch, power_connector_label_y, bottom_shell_bottom_z-extra_depth])
+                linear_extrude(power_connector_label_depth+extra_depth)
+                    mirror([1,0,0]) // read from below
+                        text(power_connector_labels[i+1], size=power_connector_label_size, font=power_connector_label_font, halign="center", valign="center");
+        }
+    }
     
     if (build_bottom_shell) {
     
@@ -460,14 +541,14 @@ module my_model() {
             // cut out for power connector
             power_connector_hole_width = 4.0;
             for (i=[-1:1:1]) {
-                power_connector_x = 0.7 + i * (power_connector_hole_width + 1);
+                power_connector_x = 0.7 + i * power_connector_hole_pitch;
                 translate([power_connector_x,-22,-26.0]) linear_extrude(6.0) square([power_connector_hole_width,10.0], center=true);
                 translate([power_connector_x,connector_pin_offset_y,-90.0]) cylinder(r=power_connector_hole_width/2, h=100.0);
             }
         
-            translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
+            translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(d=shell_side_screw_clearance_diameter, h=120);
                      
-            translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(r=shell_side_screw_diameter/2, h=120);
+            translate([0,0,base_plate_offset_z]) translate([0,0,-shell_connector_height/2]) rotate([0, 90, 0]) translate([0,0,-62]) cylinder(d=shell_side_screw_clearance_diameter, h=120);
             
             // hole for JST connectors
             translate([24.0,4.8,-17.4]) linear_extrude(4.0) square([10.0,8.0], center=true);
@@ -475,10 +556,15 @@ module my_model() {
             
             // hole at top for USB connector (needs space outside shell)
             translate([switch_cutout_offset_x-usb_cutout_recess_padding-1.05, switch_cutout_offset_y-usb_cutout_recess_padding-1.05, base_plate_offset_z-base_plate_thickness]) linear_extrude(base_plate_thickness+2.05, center=true) make_rounded_rectangle(switch_cutout_width+usb_cutout_recess_padding*2+2.1, switch_cutout_depth+usb_cutout_recess_padding*2+2.1, 1);
-        
-            
+
+            // pockets for the label inlays
+            power_connector_labels(cut_overlap);
         }
         
+    }
+
+    if (make_bottom_shell_labels) {
+        color([1,1,1]) power_connector_labels();
     }
     
     
@@ -498,7 +584,7 @@ module my_model() {
 }
 
 //intersection() {
-my_model();
+if (render_main_model) my_model();
 //translate([0,0,-90]) cylinder(h=680, r=7);
 //translate([-20,0,-90]) linear_extrude(180) square([40,80], center=true);
 //}
