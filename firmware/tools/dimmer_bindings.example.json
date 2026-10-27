@@ -1,0 +1,10 @@
+{
+  "bindings": [
+    {
+      "dimmer": "ESP Dimmer Arbeitszimmer",
+      "endpoint": "controller",
+      "group": "Licht Arbeitszimmer",
+      "lights": ["Schrank Flux"]
+    }
+  ]
+}
