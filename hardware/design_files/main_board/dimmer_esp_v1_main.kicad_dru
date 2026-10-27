@@ -1,0 +1,8 @@
+(version 1)
+(rule "HV-to-LV clearance"
+  (constraint clearance (min 3.2mm))
+  (condition "A.NetClass == 'high_voltage' && B.NetClass == 'Default'"))
+
+(rule "HV-to-HV clearance"
+  (constraint clearance (min 1.5mm))
+  (condition "A.NetClass == 'high_voltage' && B.NetClass == 'Default'"))
