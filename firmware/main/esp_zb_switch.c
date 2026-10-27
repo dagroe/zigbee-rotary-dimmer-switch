@@ -28,6 +28,7 @@
 #include "led_driver.h"
 #include "ota_driver.h"
 #include "relay_driver.h"
+#include "ext_switch.h"
 
 #if defined ZB_ED_ROLE
 #error Define ZB_COORDINATOR_ROLE in idf.py menuconfig to compile light switch source code.
@@ -39,7 +40,7 @@ static switch_func_pair_t button_func_pair[] = {
     {GPIO_INPUT_IO_TOGGLE_SWITCH, SWITCH_ONOFF_TOGGLE_CONTROL},
     {GPIO_INPUT_RELAY_SWITCH, SWITCH_RELAY_CONTROL},
     {GPIO_INPUT_EXT_ENCODER_BUTTON, SWITCH_EXT_ENCODER_BUTTON_CONTROL},
-    {GPIO_INPUT_EXT_SWITCH, SWITCH_EXT_SWITCH_CONTROL},
+    /* GPIO_INPUT_EXT_SWITCH is handled by ext_switch.c, not this driver. */
 };
 
 static QueueHandle_t led_evt_queue = NULL;
@@ -240,6 +241,20 @@ static void handle_encoder_button(encoder_ctrl_t *enc, switch_state_t state)
     }
 }
 
+// External wall switch on EP4: toggle the bound target. Whether that happens
+// per press or per position change is decided in ext_switch.c (EXT_SWITCH_MODE).
+static void ext_switch_toggle(void)
+{
+    esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
+    toggle_cmd_req.zcl_basic_cmd.src_endpoint = HA_EXT_SWITCH_ENDPOINT;
+    toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+    toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
+    #ifdef DEBUG_ENABLED
+    ESP_LOGI(TAG, "Ext switch: send 'on_off toggle' command");
+    #endif
+    ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
+}
+
 static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_state_t state)
 {
     if (button_func_pair->func == SWITCH_ONOFF_TOGGLE_CONTROL) {
@@ -248,21 +263,6 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
 
     if (button_func_pair->func == SWITCH_EXT_ENCODER_BUTTON_CONTROL) {
         handle_encoder_button(&s_ext_encoder, state);
-    }
-
-    if (button_func_pair->func == SWITCH_EXT_SWITCH_CONTROL) {
-        // External plain wall switch on EP4: toggle the bound target on each
-        // press. No level/color gesture -- it's a one-contact switch.
-        if (state == SWITCH_RELEASE_DETECTED) {
-            esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
-            toggle_cmd_req.zcl_basic_cmd.src_endpoint = HA_EXT_SWITCH_ENDPOINT;
-            toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-            toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
-            #ifdef DEBUG_ENABLED
-            ESP_LOGI(TAG, "Ext switch: send 'on_off toggle' command");
-            #endif
-            ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
-        }
     }
 
     if (button_func_pair->func == SWITCH_COMMISION_CONTROL) {
@@ -644,6 +644,11 @@ void app_main(void) {
 
     if (!switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair), esp_zb_buttons_handler)) {
         ESP_LOGE(TAG, "Switch driver init failed, rebooting");
+        esp_restart();
+    }
+    // After switch_driver_init: relies on the GPIO ISR service it installs.
+    if (!ext_switch_init(GPIO_INPUT_EXT_SWITCH, EXT_SWITCH_MODE, ext_switch_toggle)) {
+        ESP_LOGE(TAG, "External switch init failed, rebooting");
         esp_restart();
     }
     // Zigbee task runs the stack/radio timers; it must not be starved by the

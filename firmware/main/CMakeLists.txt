@@ -3,6 +3,7 @@ idf_component_register(
     "device_config.c"
     "esp_zb_switch.c"
     "switch_driver.c"
+    "ext_switch.c"
     "led_driver.c"
     "rotary_encoder.c"
     "ota_driver.c"

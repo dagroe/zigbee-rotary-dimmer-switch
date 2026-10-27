@@ -51,6 +51,12 @@ extern "C" {
 /* External switch port: a single contact to GND (active-low). */
 #define GPIO_INPUT_EXT_SWITCH         GPIO_NUM_14
 
+/* What is wired to the external switch port (values in ext_switch.h):
+   EXT_SWITCH_MODE_PUSHBUTTON - momentary button: one toggle per press.
+   EXT_SWITCH_MODE_ROCKER     - latching wall switch: toggle on every flip,
+                                on->off and off->on. */
+#define EXT_SWITCH_MODE               EXT_SWITCH_MODE_PUSHBUTTON
+
 /* Zigbee configuration ============================================================== */
 #define MAX_CHILDREN                    10          /* the max amount of connected devices */
 #define INSTALLCODE_POLICY_ENABLE       false       /* false: join with the default TC link key (what zigbee2mqtt/ZHA use by default) */

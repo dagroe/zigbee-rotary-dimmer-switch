@@ -77,7 +77,6 @@ typedef enum {
     SWITCH_COMMISION_CONTROL,
     SWITCH_RELAY_CONTROL,
     SWITCH_EXT_ENCODER_BUTTON_CONTROL,  /* push of the external encoder (EP3) */
-    SWITCH_EXT_SWITCH_CONTROL,          /* external plain wall switch (EP4) */
 } switch_func_t;
 
 typedef struct {
