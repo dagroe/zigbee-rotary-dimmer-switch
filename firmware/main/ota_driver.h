@@ -26,6 +26,9 @@ extern "C" {
 /* How often (minutes) the client asks the server whether a newer image exists. */
 #define OTA_UPGRADE_QUERY_INTERVAL_MIN  60
 
+/* How long (minutes) a freshly OTA'd image may stay unconfirmed before it is rolled back. */
+#define OTA_VERIFY_TIMEOUT_MIN  10
+
 /**
  * @brief Build the OTA Upgrade (client) cluster and append it to a cluster list.
  *        Call while assembling the endpoint in configure_device().

@@ -59,6 +59,10 @@ signal). If the new image instead crashes or wedges before rejoining, the task
 watchdog reboots it and the bootloader reverts to the previous working image. So
 an update that bricks Zigbee self-heals without a site visit.
 
+An image that keeps running but never rejoins is caught by a timer: if it is
+still unconfirmed `OTA_VERIFY_TIMEOUT_MIN` (10) minutes after boot, the firmware
+marks it invalid and reboots into the previous image.
+
 Implication for releases: the new firmware must be able to join the network, or
 it will be rolled back. A normally-booted (UART-flashed) image is never in
 pending-verify, so this is a no-op outside of OTA.
@@ -69,6 +73,7 @@ pending-verify, so this is a no-op outside of OTA.
   `OTA complete (... bytes). Rebooting`. After reboot the device rejoins, logs
   `New OTA image confirmed healthy`, and reports the new `fileVersion`.
 - To test rollback: build an image that deliberately fails to join, OTA it, and
-  confirm the device reverts to the previous version after the watchdog reboot.
+  confirm the device reverts to the previous version once the verify timeout
+  expires.
 - The two app slots are `ota_0`/`ota_1` (1.5 MB each) from the dual-OTA partition
   table; an image must fit in one slot.
