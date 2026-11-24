@@ -50,6 +50,7 @@ extern "C" {
 
 /* External switch port: a single contact to GND (active-low). */
 #define GPIO_INPUT_EXT_SWITCH         GPIO_NUM_14
+#define EXT_SWITCH_LATCHING           false       /* true: latching rocker, toggle on every flip; false: momentary push button */
 
 /* Zigbee configuration ============================================================== */
 #define MAX_CHILDREN                    10          /* the max amount of connected devices */
