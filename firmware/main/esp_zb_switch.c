@@ -378,7 +378,8 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
                 esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
             }
         } else {
-            ESP_LOGE(TAG, "Failed to initialize Zigbee stack (status: %s)", esp_err_to_name(err_status));
+            ESP_LOGE(TAG, "Failed to initialize Zigbee stack (status: %s), retrying in 1s", esp_err_to_name(err_status));
+            esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_INITIALIZATION, 1000);
         }
         led_state_t led_state_warn = LED_COLOR_STATE_WARN_RED;
         xQueueSend(led_evt_queue, &led_state_warn, 0);
