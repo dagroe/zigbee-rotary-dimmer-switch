@@ -53,7 +53,7 @@ A working second prototype is built around the **ESP32-C6**. It joins any standa
 | Push **and** rotate | Color temperature (warm / cool) |
 | Relay button — tap | Cut / restore the 230V outlet (works even with no network) |
 | External encoder (optional) | Second, independently bindable dimmer — same controls as the knob |
-| External wall switch (optional) | Toggle on / off for its own independently bound light |
+| External wall switch (optional) | Toggle on / off for its own independently bound light. A momentary push button by default; set `EXT_SWITCH_LATCHING` in `firmware/main/device_config.h` for a latching rocker (toggles on every flip) |
 | Commission button — tap | Pair (start network steering) |
 | Commission button — hold ~5 s | Factory reset (yellow warning while holding, red on reset) |
 
