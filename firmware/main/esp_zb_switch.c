@@ -85,10 +85,6 @@ static encoder_ctrl_t s_ext_encoder = {
 // This prevents spurious encoder events from mechanical coupling when pressing the button
 #define ENCODER_DEBOUNCE_AFTER_PRESS_MS 50
 
-// Safety timeout: if button_down state persists longer than this, force reset
-// This prevents getting stuck if a release event is somehow missed
-#define BUTTON_STATE_TIMEOUT_MS 5000
-
 // ZCL step mode values (spec section 3.10.2.3.1 / 5.2.2.3.1)
 #define ZCL_STEP_MODE_UP   0x00
 #define ZCL_STEP_MODE_DOWN 0x01
@@ -522,31 +518,9 @@ static void encoder_task(void *pvParameters) {
 
     while (1)
     {
-        // Safety check: periodically verify button state isn't stuck
-        // This runs every iteration (every 1000ms timeout or when event received)
-        {
-            TickType_t now = xTaskGetTickCount();
-            taskENTER_CRITICAL(&enc->mux);
-            if (enc->button_down) {
-                TickType_t elapsed_ticks = now - enc->press_tick;
-                if (elapsed_ticks > pdMS_TO_TICKS(BUTTON_STATE_TIMEOUT_MS)) {
-                    // Button state has been "down" for too long - force reset
-                    enc->button_down = false;
-                    enc->rotated_while_pressed = false;
-                    taskEXIT_CRITICAL(&enc->mux);
-                    ESP_LOGW(TAG, "Button state timeout after %lu ms - force reset",
-                             (unsigned long)(elapsed_ticks * portTICK_PERIOD_MS));
-                } else {
-                    taskEXIT_CRITICAL(&enc->mux);
-                }
-            } else {
-                taskEXIT_CRITICAL(&enc->mux);
-            }
-        }
-
         // Wait for incoming events on the event queue.
         rotary_encoder_event_t event = { 0 };
-        if (xQueueReceive(encoder_event_queue, &event, 1000 / portTICK_PERIOD_MS) == pdTRUE)
+        if (xQueueReceive(encoder_event_queue, &event, portMAX_DELAY) == pdTRUE)
         {
             // Read button state and press time atomically
             bool button_down;
