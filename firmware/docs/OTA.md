@@ -54,8 +54,8 @@ is a path z2m can read (in Docker, the in-container path), or use z2m's manual
 
 App-rollback is enabled (`CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE`). A freshly
 OTA'd image boots in *pending-verify* state and is only confirmed once the device
-**rejoins the network** (`ota_confirm_running_image()` from the steering-success
-signal). If the new image instead crashes or wedges before rejoining, the task
+**rejoins the network** (`ota_confirm_running_image()`, called when the stack
+restores the network after the reboot, or on steering success). If the new image instead crashes or wedges before rejoining, the task
 watchdog reboots it and the bootloader reverts to the previous working image. So
 an update that bricks Zigbee self-heals without a site visit.
 
