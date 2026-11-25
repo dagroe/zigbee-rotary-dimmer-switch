@@ -58,7 +58,7 @@ A working second prototype is built around the **ESP32-C6**. It joins any standa
 | Commission button — tap | Pair (start network steering); just a green blink if already joined |
 | Commission button — hold ~5 s | Factory reset (yellow warning while holding, red on reset) |
 
-LED feedback: green = joined · solid red = not connected · white blink = command sent · red blink = command dropped (not joined, or the Zigbee stack was busy) · blue blink = relay toggled · yellow = pairing / reset warning.
+LED feedback: green = joined · solid red = not connected · white blink = command sent · red blink = command dropped (not joined, or the Zigbee stack was busy) or no bound light answered within 1.5 s · blue blink = relay toggled · yellow = pairing / reset warning.
 
 ### Firmware
 Built with **ESP-IDF** and the **esp-zigbee-sdk**. From `firmware/`:

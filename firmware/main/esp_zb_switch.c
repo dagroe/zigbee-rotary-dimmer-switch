@@ -44,6 +44,18 @@ static switch_func_pair_t button_func_pair[] = {
 
 static QueueHandle_t led_evt_queue = NULL;
 
+// Delivery check. Every bound light answers a command with a ZCL Default
+// Response; if none arrives within DELIVERY_TIMEOUT_MS of a send, blink red.
+// (The SDK's send-status callback is no use here: on esp-zigbee-lib 1.6.8 it
+// reports ESP_OK immediately even when the light is unpowered.) The
+// coordinator's responses are ignored: lights are bound directly and keep
+// working while it is down.
+// ponytail: "some light answered", not "every bound light answered"; count
+// responses against the binding table if per-light reporting is ever needed.
+#define DELIVERY_TIMEOUT_MS 1500
+static TaskHandle_t s_delivery_task = NULL;
+static volatile TickType_t s_last_light_resp_tick = 0;
+
 // Set true once steering succeeds, cleared on a reset-type leave. Gates outbound
 // commands so we don't fire ZCL requests into the void, and drives a clear
 // "not joined" LED indication.
@@ -132,7 +144,8 @@ static encoder_ctrl_t s_ext_encoder = {
 
 // Send a bound ZCL command, but only while we're actually on a network. Either
 // way the user gets LED feedback: a white blink when the command is sent, a red
-// blink when it's dropped (not joined, or the stack lock timed out).
+// blink when it's dropped (not joined, or the stack lock timed out). A later red
+// blink from delivery_task means it was sent but no light answered.
 #define ZB_SEND_CMD(stmt) do {                                                        \
         led_state_t _fb = LED_COLOR_STATE_BLINK_ONCE_RED;                             \
         if (!s_network_joined) {                                                      \
@@ -141,6 +154,7 @@ static encoder_ctrl_t s_ext_encoder = {
             stmt;                                                                     \
             esp_zb_lock_release();                                                    \
             _fb = LED_COLOR_STATE_BLINK_ONCE_WHITE;                                   \
+            xTaskNotifyGive(s_delivery_task);                                         \
         } else {                                                                      \
             ESP_LOGW(TAG, "Zigbee stack lock timeout, dropped: %s", #stmt);           \
         }                                                                             \
@@ -148,6 +162,21 @@ static encoder_ctrl_t s_ext_encoder = {
     } while (0)
 
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
+
+static void delivery_task(void *pvParameters)
+{
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);          // a command was sent
+        TickType_t sent = xTaskGetTickCount();
+        vTaskDelay(pdMS_TO_TICKS(DELIVERY_TIMEOUT_MS));
+        ulTaskNotifyTake(pdTRUE, 0);                      // sends during the wait share this check
+        if ((int32_t)(s_last_light_resp_tick - sent) < 0) {
+            ESP_LOGW(TAG, "No light answered within %d ms", DELIVERY_TIMEOUT_MS);
+            led_state_t led = LED_COLOR_STATE_BLINK_ONCE_RED;
+            xQueueSend(led_evt_queue, &led, 0);
+        }
+    }
+}
 
 // Go to a fixed brightness, turning the light on if it is off.
 static void send_level_preset(encoder_ctrl_t *enc, uint8_t level)
@@ -512,6 +541,19 @@ static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
         }
         return ESP_OK;
     }
+    case ESP_ZB_CORE_CMD_DEFAULT_RESP_CB_ID: {
+        const esp_zb_zcl_cmd_default_resp_message_t *m =
+            (const esp_zb_zcl_cmd_default_resp_message_t *)message;
+        uint16_t src = m->info.src_address.u.short_addr;
+        #ifdef DEBUG_ENABLED
+        ESP_LOGI(TAG, "Default Response from 0x%04x (addr type %d), status 0x%02x",
+                 src, m->info.src_address.addr_type, m->status_code);
+        #endif
+        if (src != 0x0000) {   // 0x0000 = coordinator
+            s_last_light_resp_tick = xTaskGetTickCount();
+        }
+        return ESP_OK;
+    }
     default:
         #ifdef DEBUG_ENABLED
         ESP_LOGI(TAG, "Unhandled Zigbee action callback 0x%x", callback_id);
@@ -683,6 +725,10 @@ void app_main(void) {
     led_state_t led_state_init = LED_COLOR_STATE_WARN_RED;
     xQueueSend(led_evt_queue, &led_state_init, 0);
 
+    if (xTaskCreate(delivery_task, "Delivery", 3072, NULL, 4, &s_delivery_task) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create delivery task, rebooting");
+        esp_restart();
+    }
     // Click tasks must exist before the button driver can deliver events.
     if (xTaskCreate(click_task, "Click_main", 4096, &s_onboard_encoder, 5, &s_onboard_encoder.click_task) != pdPASS ||
         xTaskCreate(click_task, "Click_ext", 4096, &s_ext_encoder, 5, &s_ext_encoder.click_task) != pdPASS) {
