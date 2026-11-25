@@ -84,6 +84,16 @@ static encoder_ctrl_t s_ext_encoder = {
 // Debounce period: ignore encoder events within this time after button press
 // This prevents spurious encoder events from mechanical coupling when pressing the button
 #define ENCODER_DEBOUNCE_AFTER_PRESS_MS 50
+/* Rotation tuning. A bulb re-bases every new Step on its level at that instant
+   (ZCL has no queue), so the fade must outlast the gap between commands or the
+   light stair-steps; each acked unicast also needs ~45 ms of air time per
+   bound target. Hence: transition > send interval, and a slow-ish interval.
+   ponytail: relative Step, open loop. If it still stutters, upgrade to an
+   absolute Move-to-Level target paced by the TX-status callback. */
+#define ENCODER_SEND_INTERVAL_MS 200      /* min gap between Zigbee commands while turning */
+#define ENCODER_TRANSITION_DS 3           /* fade per command, 1/10 s; keep > interval */
+#define ENCODER_LEVEL_STEP_PER_CLICK 18   /* brightness per detent (0..254 range) */
+#define ENCODER_LEVEL_STEP_MAX 120        /* guard against bounce-inflated counts */
 
 // ZCL step mode values (spec section 3.10.2.3.1 / 5.2.2.3.1)
 #define ZCL_STEP_MODE_UP   0x00
@@ -581,7 +591,7 @@ static void encoder_task(void *pvParameters) {
                                         ? ESP_ZB_ZCL_CMD_COLOR_CONTROL_STEP_UP
                                         : ESP_ZB_ZCL_CMD_COLOR_CONTROL_STEP_DOWN;
                     cmd_req.step_size = 25 * steps;          // mireds per detent
-                    cmd_req.transition_time = 1;
+                    cmd_req.transition_time = ENCODER_TRANSITION_DS;
                     cmd_req.color_temperature_minimum = 153; // ~6500 K (cool)
                     cmd_req.color_temperature_maximum = 500; // ~2000 K (warm)
                     #ifdef DEBUG_ENABLED
@@ -601,13 +611,19 @@ static void encoder_task(void *pvParameters) {
                 cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
                 cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
                 cmd_req.step_mode = clockwise ? ZCL_STEP_MODE_UP : ZCL_STEP_MODE_DOWN;
-                cmd_req.step_size = 15 * steps > 255 ? 255 : 15 * steps;
-                cmd_req.transition_time = 1;
+                uint32_t step = ENCODER_LEVEL_STEP_PER_CLICK * steps;
+                cmd_req.step_size = step > ENCODER_LEVEL_STEP_MAX ? ENCODER_LEVEL_STEP_MAX : step;
+                cmd_req.transition_time = ENCODER_TRANSITION_DS;
                 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "Send 'level step' command");
                 #endif
                 ZB_SEND_CMD(esp_zb_zcl_level_step_cmd_req(&cmd_req));
             }
+
+            /* Throttle: detents turned during this pause overwrite the single-slot
+               queue, and the position delta above folds them into ONE command. This
+               keeps the bulb from being flooded (lag, brightness jumps on bursts). */
+            vTaskDelay(pdMS_TO_TICKS(ENCODER_SEND_INTERVAL_MS));
         }
     }
 }
