@@ -398,7 +398,9 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
             #endif
             
         s_network_joined = true;
-        led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_GREEN;
+        led_state_t led_state_success = LED_COLOR_STATE_OFF;
+        xQueueSend(led_evt_queue, &led_state_success, 0);
+        led_state_success = LED_COLOR_STATE_BLINK_ONCE_GREEN;
         xQueueSend(led_evt_queue, &led_state_success, 0);
 
         /* Joining proves the stack/radio work: confirm a pending OTA image so it

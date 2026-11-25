@@ -62,6 +62,8 @@ static void led_task(void *pvParameters) {
 
     led_state_t current_state = LED_COLOR_STATE_OFF;
     led_state_t requested_state = LED_COLOR_STATE_OFF;
+    led_state_t base_state = LED_COLOR_STATE_OFF;
+    bool restore_pending = false;
 
     const TickType_t tick_50ms = 50 / portTICK_PERIOD_MS;
     const TickType_t blink_period_ticks = 400 / portTICK_PERIOD_MS; // 400ms period
@@ -81,7 +83,13 @@ static void led_task(void *pvParameters) {
     uint8_t led_brightness = 5;
 
     while (1) {
-        if (xQueueReceive(led_evt_queue, &requested_state, tick_50ms) == pdTRUE) {
+        bool have_event = xQueueReceive(led_evt_queue, &requested_state, tick_50ms) == pdTRUE;
+        if (!have_event && restore_pending) {
+            requested_state = base_state;
+            have_event = true;
+        }
+        if (have_event) {
+            restore_pending = false;
             // Always process one-shot blink events so they retrigger on rapid
             // encoder rotations even when the same state is requested again.
             bool is_one_shot = (requested_state == LED_COLOR_STATE_FEEDBACK_WHITE_ONE_PULSE
@@ -90,6 +98,9 @@ static void led_task(void *pvParameters) {
                                 || requested_state == LED_COLOR_STATE_BLINK_ONCE_BLUE
                                 || requested_state == LED_COLOR_STATE_BLINK_ONCE_YELLOW
                                 || requested_state == LED_COLOR_STATE_BLINK_ONCE_WHITE);
+            if (!is_one_shot) {
+                base_state = requested_state;
+            }
             if (requested_state != current_state || is_one_shot) {
 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "LED event: code %u", requested_state);
@@ -203,6 +214,7 @@ static void led_task(void *pvParameters) {
                     blink_enabled = false;
                     blink_one_shot = false;
                     current_state = LED_COLOR_STATE_OFF;
+                    restore_pending = true;
                 }
 
                 phase_deadline = now + blink_half_period;
