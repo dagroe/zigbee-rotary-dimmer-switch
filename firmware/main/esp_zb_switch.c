@@ -89,14 +89,14 @@ static encoder_ctrl_t s_ext_encoder = {
    (ZCL has no queue), so the fade must outlast the gap between commands or the
    light stair-steps; each acked unicast also needs ~45 ms of air time per
    bound target. Hence: transition > send interval, and a slow-ish interval.
-   ponytail: relative Step, open loop. If it still stutters, upgrade to an
+   Note: relative Step, open loop. If it still stutters, upgrade to an
    absolute Move-to-Level target paced by the TX-status callback. */
 #define ENCODER_SEND_INTERVAL_MS 200      /* min gap between Zigbee commands while turning */
 #define ENCODER_TRANSITION_DS 3           /* fade per command, 1/10 s; keep > interval */
 #define ENCODER_LEVEL_STEP_PER_CLICK 18   /* brightness per detent (0..254 range) */
 #define ENCODER_LEVEL_STEP_MAX 120        /* guard against bounce-inflated counts */
 
-/* Button presets: double-click = full brightness, hold then release = minimum. */
+/* Button presets: double-click = full brightness, hold 0.5 s = minimum. */
 #define BUTTON_DOUBLE_CLICK_MS 400      /* wait this long after a click for a second one; also the single-click delay */
 #define LEVEL_PRESET_MAX 254
 #define LEVEL_PRESET_MIN 2              /* not 1: a "with on/off" move down to the minimum level turns the bulb OFF (ZCL), seen on Aqara T2 */

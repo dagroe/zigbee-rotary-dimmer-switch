@@ -40,4 +40,4 @@ All in `firmware/main/esp_zb_switch.c`.
 
 ## Verification
 
-No host-side test harness exists. Verified by building for ESP32-C6 and on the bench with an Aqara T2 bulb bound through ZHA: single, double and triple click, hold, and push-and-rotate, from both on and off.
+The button state machine has a host test (`firmware/host_test/run.sh`); the gesture logic on top of it does not. Verified by building for ESP32-C6 and on the bench with an Aqara T2 bulb bound through ZHA: single, double and triple click, hold, and push-and-rotate, from both on and off.
