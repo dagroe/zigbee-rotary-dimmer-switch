@@ -32,7 +32,7 @@ extern "C" {
 #define ROT_ENC_A_GPIO GPIO_NUM_21
 #define ROT_ENC_B_GPIO GPIO_NUM_22
 
-#define ENABLE_HALF_STEPS true  // Set to true to enable tracking of rotary encoder at half step resolution
+#define ENABLE_HALF_STEPS true  // true: a detent every half quadrature cycle (the on-board PEC11S). false: one full cycle per detent (KY-040, most EC11), where half steps would count 2 per click
 #define RESET_AT          0      // Set to a positive non-zero number to reset the position if this value is exceeded
 #define FLIP_DIRECTION    true   // Set to true to reverse the clockwise/counterclockwise sense
 
@@ -50,6 +50,7 @@ extern "C" {
 
 /* External switch port: a single contact to GND (active-low). */
 #define GPIO_INPUT_EXT_SWITCH         GPIO_NUM_14
+#define EXT_SWITCH_LATCHING           false       /* true: latching rocker, toggle on every flip; false: momentary push button */
 
 /* Zigbee configuration ============================================================== */
 #define MAX_CHILDREN                    10          /* the max amount of connected devices */

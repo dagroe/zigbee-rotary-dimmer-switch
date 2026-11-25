@@ -48,16 +48,17 @@ A working second prototype is built around the **ESP32-C6**. It joins any standa
 | Input | Action |
 | ----- | ------ |
 | Rotate knob | Brightness up / down (bound lights) |
-| Push knob — short tap | Toggle on / off |
-| Push knob — hold | Off |
+| Push knob — short tap | Toggle on / off (sent 0.4 s after release, while waiting for a second tap) |
+| Push knob — double tap | Full brightness (turns the light on if it is off) |
+| Push knob — hold 0.5 s | Minimum brightness (turns the light on if it is off) |
 | Push **and** rotate | Color temperature (warm / cool) |
 | Relay button — tap | Cut / restore the 230V outlet (works even with no network) |
 | External encoder (optional) | Second, independently bindable dimmer — same controls as the knob |
-| External wall switch (optional) | Toggle on / off for its own independently bound light |
-| Commission button — tap | Pair (start network steering) |
+| External wall switch (optional) | Toggle on / off for its own independently bound light. A momentary push button by default; set `EXT_SWITCH_LATCHING` in `firmware/main/device_config.h` for a latching rocker (toggles on every flip) |
+| Commission button — tap | Pair (start network steering); just a green blink if already joined |
 | Commission button — hold ~5 s | Factory reset (yellow warning while holding, red on reset) |
 
-LED feedback: green = joined · solid red = not connected · white blink = command sent · red blink = command dropped (not joined) · blue blink = relay toggled · yellow = pairing / reset warning.
+LED feedback: green = joined · solid red = not connected · white blink = command sent · red blink = command dropped (not joined, or the Zigbee stack was busy) or no bound light answered within 1.5 s · blue blink = relay toggled · yellow = pairing / reset warning.
 
 ### Firmware
 Built with **ESP-IDF** and the **esp-zigbee-sdk**. From `firmware/`:

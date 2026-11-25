@@ -44,6 +44,18 @@ static switch_func_pair_t button_func_pair[] = {
 
 static QueueHandle_t led_evt_queue = NULL;
 
+// Delivery check. Every bound light answers a command with a ZCL Default
+// Response; if none arrives within DELIVERY_TIMEOUT_MS of a send, blink red.
+// (The SDK's send-status callback is no use here: on esp-zigbee-lib 1.6.8 it
+// reports ESP_OK immediately even when the light is unpowered.) The
+// coordinator's responses are ignored: lights are bound directly and keep
+// working while it is down.
+// ponytail: "some light answered", not "every bound light answered"; count
+// responses against the binding table if per-light reporting is ever needed.
+#define DELIVERY_TIMEOUT_MS 1500
+static TaskHandle_t s_delivery_task = NULL;
+static volatile TickType_t s_last_light_resp_tick = 0;
+
 // Set true once steering succeeds, cleared on a reset-type leave. Gates outbound
 // commands so we don't fire ZCL requests into the void, and drives a clear
 // "not joined" LED indication.
@@ -65,6 +77,7 @@ typedef struct {
     volatile bool button_down;
     volatile bool rotated_while_pressed;
     volatile TickType_t press_tick;
+    TaskHandle_t click_task;               // resolves single vs double click
 } encoder_ctrl_t;
 
 static encoder_ctrl_t s_onboard_encoder = {
@@ -84,10 +97,22 @@ static encoder_ctrl_t s_ext_encoder = {
 // Debounce period: ignore encoder events within this time after button press
 // This prevents spurious encoder events from mechanical coupling when pressing the button
 #define ENCODER_DEBOUNCE_AFTER_PRESS_MS 50
+/* Rotation tuning. A bulb re-bases every new Step on its level at that instant
+   (ZCL has no queue), so the fade must outlast the gap between commands or the
+   light stair-steps; each acked unicast also needs ~45 ms of air time per
+   bound target. Hence: transition > send interval, and a slow-ish interval.
+   Note: relative Step, open loop. If it still stutters, upgrade to an
+   absolute Move-to-Level target paced by the TX-status callback. */
+#define ENCODER_SEND_INTERVAL_MS 200      /* min gap between Zigbee commands while turning */
+#define ENCODER_TRANSITION_DS 3           /* fade per command, 1/10 s; keep > interval */
+#define ENCODER_LEVEL_STEP_PER_CLICK 18   /* brightness per detent (0..254 range) */
+#define ENCODER_LEVEL_STEP_MAX 120        /* guard against bounce-inflated counts */
 
-// Safety timeout: if button_down state persists longer than this, force reset
-// This prevents getting stuck if a release event is somehow missed
-#define BUTTON_STATE_TIMEOUT_MS 5000
+/* Button presets: double-click = full brightness, hold 0.5 s = minimum. */
+#define BUTTON_DOUBLE_CLICK_MS 400      /* wait this long after a click for a second one; also the single-click delay */
+#define LEVEL_PRESET_MAX 254
+#define LEVEL_PRESET_MIN 2              /* not 1: a "with on/off" move down to the minimum level turns the bulb OFF (ZCL), seen on Aqara T2 */
+#define LEVEL_PRESET_TRANSITION_DS 5    /* 0.5 s */
 
 // ZCL step mode values (spec section 3.10.2.3.1 / 5.2.2.3.1)
 #define ZCL_STEP_MODE_UP   0x00
@@ -119,26 +144,88 @@ static encoder_ctrl_t s_ext_encoder = {
 
 // Send a bound ZCL command, but only while we're actually on a network. Either
 // way the user gets LED feedback: a white blink when the command is sent, a red
-// blink when it's dropped because the device isn't joined.
-#define ZB_SEND_CMD(stmt) do {                                       \
-        led_state_t _fb;                                             \
-        if (s_network_joined) {                                      \
-            ZB_LOCKED(stmt);                                         \
-            _fb = LED_COLOR_STATE_BLINK_ONCE_WHITE;                  \
-        } else {                                                     \
-            ESP_LOGW(TAG, "Not joined; dropped: %s", #stmt);         \
-            _fb = LED_COLOR_STATE_BLINK_ONCE_RED;                    \
-        }                                                            \
-        xQueueSend(led_evt_queue, &_fb, 0);                          \
+// blink when it's dropped (not joined, or the stack lock timed out). A later red
+// blink from delivery_task means it was sent but no light answered.
+#define ZB_SEND_CMD(stmt) do {                                                        \
+        led_state_t _fb = LED_COLOR_STATE_BLINK_ONCE_RED;                             \
+        if (!s_network_joined) {                                                      \
+            ESP_LOGW(TAG, "Not joined; dropped: %s", #stmt);                          \
+        } else if (esp_zb_lock_acquire(pdMS_TO_TICKS(ZB_STACK_LOCK_TIMEOUT_MS))) {    \
+            stmt;                                                                     \
+            esp_zb_lock_release();                                                    \
+            _fb = LED_COLOR_STATE_BLINK_ONCE_WHITE;                                   \
+            xTaskNotifyGive(s_delivery_task);                                         \
+        } else {                                                                      \
+            ESP_LOGW(TAG, "Zigbee stack lock timeout, dropped: %s", #stmt);           \
+        }                                                                             \
+        xQueueSend(led_evt_queue, &_fb, 0);                                           \
     } while (0)
 
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
 
+static void delivery_task(void *pvParameters)
+{
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);          // a command was sent
+        TickType_t sent = xTaskGetTickCount();
+        vTaskDelay(pdMS_TO_TICKS(DELIVERY_TIMEOUT_MS));
+        ulTaskNotifyTake(pdTRUE, 0);                      // sends during the wait share this check
+        if ((int32_t)(s_last_light_resp_tick - sent) < 0) {
+            ESP_LOGW(TAG, "No light answered within %d ms", DELIVERY_TIMEOUT_MS);
+            led_state_t led = LED_COLOR_STATE_BLINK_ONCE_RED;
+            xQueueSend(led_evt_queue, &led, 0);
+        }
+    }
+}
+
+// Go to a fixed brightness, turning the light on if it is off.
+static void send_level_preset(encoder_ctrl_t *enc, uint8_t level)
+{
+    esp_zb_zcl_move_to_level_cmd_t cmd_req;
+    cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
+    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+    cmd_req.level = level;
+    cmd_req.transition_time = LEVEL_PRESET_TRANSITION_DS;
+    #ifdef DEBUG_ENABLED
+    ESP_LOGI(TAG, "Send 'move to level with on/off' %d", level);
+    #endif
+    ZB_SEND_CMD(esp_zb_zcl_level_move_to_level_with_onoff_cmd_req(&cmd_req));
+}
+
+// One per encoder. Each short click notifies this task; it waits
+// BUTTON_DOUBLE_CLICK_MS to see whether a second click follows, so a
+// double-click never toggles the light first.
+static void click_task(void *pvParameters)
+{
+    encoder_ctrl_t *enc = (encoder_ctrl_t *)pvParameters;
+    const TickType_t window = pdMS_TO_TICKS(BUTTON_DOUBLE_CLICK_MS);
+
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);          // first click
+        if (ulTaskNotifyTake(pdTRUE, window) == 0) {      // no second click: single
+            esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
+            toggle_cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
+            toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+            toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
+            #ifdef DEBUG_ENABLED
+            ESP_LOGI(TAG, "Send 'on_off toggle' command");
+            #endif
+            ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
+            continue;
+        }
+        send_level_preset(enc, LEVEL_PRESET_MAX);         // double-click
+        while (ulTaskNotifyTake(pdTRUE, window)) {        // ignore third and later
+        }
+    }
+}
+
 // Handle a press/hold/release event for an encoder's push-button. Shared by both
 // the on-board encoder (EP1) and the external encoder (EP3); `enc` selects which
-// instance's state and source endpoint to use. Mirrors the button+rotate
-// interaction: short press = toggle, hold = off, and either is suppressed if the
-// encoder was rotated while the button was held (that gesture is color-temp).
+// instance's state and source endpoint to use. Short press = toggle, double
+// short press = full brightness (both resolved in click_task); hold 0.5s =
+// minimum brightness, sent while still held. Rotating while the button is held
+// is the color-temp gesture and suppresses the click; it suppresses the hold
+// action only if the rotation starts within the first 0.5s.
 static void handle_encoder_button(encoder_ctrl_t *enc, switch_state_t state)
 {
     #ifdef DEBUG_ENABLED
@@ -159,7 +246,7 @@ static void handle_encoder_button(encoder_ctrl_t *enc, switch_state_t state)
             break;
 
         case SWITCH_RELEASE_DETECTED: {
-            // Short press release: send toggle only if encoder didn't rotate
+            // Short press release: count as a click only if encoder didn't rotate
             bool rotated;
             taskENTER_CRITICAL(&enc->mux);
             rotated = enc->rotated_while_pressed;
@@ -168,56 +255,34 @@ static void handle_encoder_button(encoder_ctrl_t *enc, switch_state_t state)
             taskEXIT_CRITICAL(&enc->mux);
 
             if (!rotated) {
-                esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
-                toggle_cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
-                toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Send 'on_off toggle' command");
-                #endif
-                ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
+                xTaskNotifyGive(enc->click_task);
             } else {
                 #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Toggle suppressed - encoder rotated while pressed");
+                ESP_LOGI(TAG, "Click suppressed - encoder rotated while pressed");
                 #endif
             }
             break;
         }
 
         case SWITCH_LONG_RELEASE_DETECTED:
-        case SWITCH_HOLD_RELEASE_DETECTED: {
-            // Released after any hold >=0.5s (both the 0.5-5s and >5s paths):
-            // send off if the encoder didn't rotate. Handling both releases
-            // removes the dead zone where a >5s hold used to do nothing.
-            bool rotated;
+        case SWITCH_HOLD_RELEASE_DETECTED:
+            // Released after a hold: the action (minimum brightness, or the
+            // color-temp rotation) already happened while held; just clear state.
             taskENTER_CRITICAL(&enc->mux);
-            rotated = enc->rotated_while_pressed;
             enc->button_down = false;
             enc->rotated_while_pressed = false;
             taskEXIT_CRITICAL(&enc->mux);
-
-            if (!rotated) {
-                esp_zb_zcl_on_off_cmd_t off_cmd_req;
-                off_cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
-                off_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                off_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_OFF_ID;
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Send 'on_off off' command");
-                #endif
-                ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&off_cmd_req));
-            } else {
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Off suppressed - encoder rotated while pressed");
-                #endif
-            }
             break;
-        }
 
         case SWITCH_LONG_PRESS_DETECTED:
-            // Long press detected (button still held): no action needed, state stays
+            // Held 0.5s without rotating: go to minimum brightness right away.
+            // If the user is already rotating, this is the color-temp gesture.
             #ifdef DEBUG_ENABLED
             ESP_LOGI(TAG, "Long press detected, button still held");
             #endif
+            if (!enc->rotated_while_pressed) {
+                send_level_preset(enc, LEVEL_PRESET_MIN);
+            }
             break;
 
         case SWITCH_HOLD_DETECTED:
@@ -253,7 +318,13 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
     if (button_func_pair->func == SWITCH_EXT_SWITCH_CONTROL) {
         // External plain wall switch on EP4: toggle the bound target on each
         // press. No level/color gesture -- it's a one-contact switch.
-        if (state == SWITCH_RELEASE_DETECTED) {
+        bool toggle = (state == SWITCH_RELEASE_DETECTED);
+        if (EXT_SWITCH_LATCHING) {
+            toggle = toggle || state == SWITCH_PRESS_DETECTED
+                            || state == SWITCH_LONG_RELEASE_DETECTED
+                            || state == SWITCH_HOLD_RELEASE_DETECTED;
+        }
+        if (toggle) {
             esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
             toggle_cmd_req.zcl_basic_cmd.src_endpoint = HA_EXT_SWITCH_ENDPOINT;
             toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
@@ -270,9 +341,13 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
         switch(state) {
             case SWITCH_RELEASE_DETECTED:
                 // Short press: trigger network steering (rejoin/find new network)
-                ESP_LOGI(TAG, "Commission button: start network steering");
-                ZB_LOCKED(esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING));
-                {
+                if (s_network_joined) {
+                    ESP_LOGI(TAG, "Commission button: already joined");
+                    led_state_t led_state = LED_COLOR_STATE_BLINK_ONCE_GREEN;
+                    xQueueSend(led_evt_queue, &led_state, 0);
+                } else {
+                    ESP_LOGI(TAG, "Commission button: start network steering");
+                    ZB_LOCKED(esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING));
                     led_state_t led_state = LED_COLOR_STATE_BLINK_ONCE_YELLOW;
                     xQueueSend(led_evt_queue, &led_state, 0);
                 }
@@ -359,30 +434,28 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
         esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
         break;
     case ESP_ZB_BDB_SIGNAL_DEVICE_FIRST_START:
-    case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT:
-        if (err_status == ESP_OK) {
-    //         esp_zb_factory_reset();
+    case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT: {
+        led_state_t led_state_start = LED_COLOR_STATE_WARN_RED;
+        if (err_status != ESP_OK) {
+            ESP_LOGE(TAG, "Failed to initialize Zigbee stack (status: %s), retrying in 1s", esp_err_to_name(err_status));
+            esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_INITIALIZATION, 1000);
+        } else if (esp_zb_bdb_is_factory_new()) {
             #ifdef DEBUG_ENABLED
-            ESP_LOGI(TAG, "Device started up in %s factory-reset mode", esp_zb_bdb_is_factory_new() ? "" : "non");
+            ESP_LOGI(TAG, "Factory-new device: start network steering");
             #endif
-            if (esp_zb_bdb_is_factory_new()) {
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Start network steering");
-                #endif
-                esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
-            } else {
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Device rebooted");
-                ESP_LOGI(TAG, "Start network steering");
-                #endif
-                esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
-            }
+            esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
         } else {
-            ESP_LOGE(TAG, "Failed to initialize Zigbee stack (status: %s)", esp_err_to_name(err_status));
+            /* Already on a network: steering here would only broadcast permit-join. */
+            ESP_LOGI(TAG, "Device rebooted, network restored");
+            s_network_joined = true;
+            led_state_start = LED_COLOR_STATE_OFF;
+            xQueueSend(led_evt_queue, &led_state_start, 0);
+            led_state_start = LED_COLOR_STATE_BLINK_ONCE_GREEN;
+            ota_confirm_running_image();
         }
-        led_state_t led_state_warn = LED_COLOR_STATE_WARN_RED;
-        xQueueSend(led_evt_queue, &led_state_warn, 0);
+        xQueueSend(led_evt_queue, &led_state_start, 0);
         break;
+    }
     case ESP_ZB_BDB_SIGNAL_STEERING:
         if (err_status == ESP_OK) {
             esp_zb_ieee_addr_t extended_pan_id;
@@ -395,7 +468,9 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
             #endif
             
         s_network_joined = true;
-        led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_GREEN;
+        led_state_t led_state_success = LED_COLOR_STATE_OFF;
+        xQueueSend(led_evt_queue, &led_state_success, 0);
+        led_state_success = LED_COLOR_STATE_BLINK_ONCE_GREEN;
         xQueueSend(led_evt_queue, &led_state_success, 0);
 
         /* Joining proves the stack/radio work: confirm a pending OTA image so it
@@ -466,6 +541,19 @@ static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
         }
         return ESP_OK;
     }
+    case ESP_ZB_CORE_CMD_DEFAULT_RESP_CB_ID: {
+        const esp_zb_zcl_cmd_default_resp_message_t *m =
+            (const esp_zb_zcl_cmd_default_resp_message_t *)message;
+        uint16_t src = m->info.src_address.u.short_addr;
+        #ifdef DEBUG_ENABLED
+        ESP_LOGI(TAG, "Default Response from 0x%04x (addr type %d), status 0x%02x",
+                 src, m->info.src_address.addr_type, m->status_code);
+        #endif
+        if (src != 0x0000) {   // 0x0000 = coordinator
+            s_last_light_resp_tick = xTaskGetTickCount();
+        }
+        return ESP_OK;
+    }
     default:
         #ifdef DEBUG_ENABLED
         ESP_LOGI(TAG, "Unhandled Zigbee action callback 0x%x", callback_id);
@@ -515,6 +603,7 @@ static void encoder_task(void *pvParameters) {
     // Create a queue for events from the rotary encoder driver.
     // Tasks can read from this queue to receive up to date position information.
     QueueHandle_t encoder_event_queue = rotary_encoder_create_queue();
+    rotary_encoder_position_t last_position = 0;
     ESP_ERROR_CHECK(rotary_encoder_set_queue(&encoder_info, encoder_event_queue));
     #ifdef DEBUG_ENABLED
     ESP_LOGI(TAG, "Queue created");
@@ -522,31 +611,9 @@ static void encoder_task(void *pvParameters) {
 
     while (1)
     {
-        // Safety check: periodically verify button state isn't stuck
-        // This runs every iteration (every 1000ms timeout or when event received)
-        {
-            TickType_t now = xTaskGetTickCount();
-            taskENTER_CRITICAL(&enc->mux);
-            if (enc->button_down) {
-                TickType_t elapsed_ticks = now - enc->press_tick;
-                if (elapsed_ticks > pdMS_TO_TICKS(BUTTON_STATE_TIMEOUT_MS)) {
-                    // Button state has been "down" for too long - force reset
-                    enc->button_down = false;
-                    enc->rotated_while_pressed = false;
-                    taskEXIT_CRITICAL(&enc->mux);
-                    ESP_LOGW(TAG, "Button state timeout after %lu ms - force reset",
-                             (unsigned long)(elapsed_ticks * portTICK_PERIOD_MS));
-                } else {
-                    taskEXIT_CRITICAL(&enc->mux);
-                }
-            } else {
-                taskEXIT_CRITICAL(&enc->mux);
-            }
-        }
-
         // Wait for incoming events on the event queue.
         rotary_encoder_event_t event = { 0 };
-        if (xQueueReceive(encoder_event_queue, &event, 1000 / portTICK_PERIOD_MS) == pdTRUE)
+        if (xQueueReceive(encoder_event_queue, &event, portMAX_DELAY) == pdTRUE)
         {
             // Read button state and press time atomically
             bool button_down;
@@ -561,6 +628,16 @@ static void encoder_task(void *pvParameters) {
                      event.state.direction ? (event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? "CW" : "CCW") : "NOT_SET",
                      button_down ? "DOWN" : "UP");
             #endif
+
+            /* The queue keeps only the latest event, so use the position
+               difference to cover detents turned while a command was sending. */
+            rotary_encoder_position_t delta = event.state.position - last_position;
+            last_position = event.state.position;
+            if (delta == 0) {
+                continue;
+            }
+            bool clockwise = delta > 0;
+            uint32_t steps = clockwise ? delta : -delta;
 
             if (button_down) {
                 // Button is pressed - check if we're past the debounce period
@@ -580,11 +657,11 @@ static void encoder_task(void *pvParameters) {
                     esp_zb_zcl_color_step_color_temperature_cmd_t cmd_req;
                     cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
                     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                    cmd_req.move_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE
+                    cmd_req.move_mode = clockwise
                                         ? ESP_ZB_ZCL_CMD_COLOR_CONTROL_STEP_UP
                                         : ESP_ZB_ZCL_CMD_COLOR_CONTROL_STEP_DOWN;
-                    cmd_req.step_size = 25;                  // mireds per detent
-                    cmd_req.transition_time = 1;
+                    cmd_req.step_size = 25 * steps;          // mireds per detent
+                    cmd_req.transition_time = ENCODER_TRANSITION_DS;
                     cmd_req.color_temperature_minimum = 153; // ~6500 K (cool)
                     cmd_req.color_temperature_maximum = 500; // ~2000 K (warm)
                     #ifdef DEBUG_ENABLED
@@ -603,14 +680,20 @@ static void encoder_task(void *pvParameters) {
                 esp_zb_zcl_level_step_cmd_t cmd_req;
                 cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
                 cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? ZCL_STEP_MODE_UP : ZCL_STEP_MODE_DOWN;
-                cmd_req.step_size = 15;
-                cmd_req.transition_time = 1;
+                cmd_req.step_mode = clockwise ? ZCL_STEP_MODE_UP : ZCL_STEP_MODE_DOWN;
+                uint32_t step = ENCODER_LEVEL_STEP_PER_CLICK * steps;
+                cmd_req.step_size = step > ENCODER_LEVEL_STEP_MAX ? ENCODER_LEVEL_STEP_MAX : step;
+                cmd_req.transition_time = ENCODER_TRANSITION_DS;
                 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "Send 'level step' command");
                 #endif
                 ZB_SEND_CMD(esp_zb_zcl_level_step_cmd_req(&cmd_req));
             }
+
+            /* Throttle: detents turned during this pause overwrite the single-slot
+               queue, and the position delta above folds them into ONE command. This
+               keeps the bulb from being flooded (lag, brightness jumps on bursts). */
+            vTaskDelay(pdMS_TO_TICKS(ENCODER_SEND_INTERVAL_MS));
         }
     }
 }
@@ -641,6 +724,17 @@ void app_main(void) {
     setup_led_strip(led_evt_queue);
     led_state_t led_state_init = LED_COLOR_STATE_WARN_RED;
     xQueueSend(led_evt_queue, &led_state_init, 0);
+
+    if (xTaskCreate(delivery_task, "Delivery", 3072, NULL, 4, &s_delivery_task) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create delivery task, rebooting");
+        esp_restart();
+    }
+    // Click tasks must exist before the button driver can deliver events.
+    if (xTaskCreate(click_task, "Click_main", 4096, &s_onboard_encoder, 5, &s_onboard_encoder.click_task) != pdPASS ||
+        xTaskCreate(click_task, "Click_ext", 4096, &s_ext_encoder, 5, &s_ext_encoder.click_task) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create click tasks, rebooting");
+        esp_restart();
+    }
 
     if (!switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair), esp_zb_buttons_handler)) {
         ESP_LOGE(TAG, "Switch driver init failed, rebooting");
