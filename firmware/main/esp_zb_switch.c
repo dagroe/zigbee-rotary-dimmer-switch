@@ -85,10 +85,6 @@ static encoder_ctrl_t s_ext_encoder = {
 // This prevents spurious encoder events from mechanical coupling when pressing the button
 #define ENCODER_DEBOUNCE_AFTER_PRESS_MS 50
 
-// Safety timeout: if button_down state persists longer than this, force reset
-// This prevents getting stuck if a release event is somehow missed
-#define BUTTON_STATE_TIMEOUT_MS 5000
-
 // ZCL step mode values (spec section 3.10.2.3.1 / 5.2.2.3.1)
 #define ZCL_STEP_MODE_UP   0x00
 #define ZCL_STEP_MODE_DOWN 0x01
@@ -253,7 +249,13 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
     if (button_func_pair->func == SWITCH_EXT_SWITCH_CONTROL) {
         // External plain wall switch on EP4: toggle the bound target on each
         // press. No level/color gesture -- it's a one-contact switch.
-        if (state == SWITCH_RELEASE_DETECTED) {
+        bool toggle = (state == SWITCH_RELEASE_DETECTED);
+        if (EXT_SWITCH_LATCHING) {
+            toggle = toggle || state == SWITCH_PRESS_DETECTED
+                            || state == SWITCH_LONG_RELEASE_DETECTED
+                            || state == SWITCH_HOLD_RELEASE_DETECTED;
+        }
+        if (toggle) {
             esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
             toggle_cmd_req.zcl_basic_cmd.src_endpoint = HA_EXT_SWITCH_ENDPOINT;
             toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
@@ -270,9 +272,13 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
         switch(state) {
             case SWITCH_RELEASE_DETECTED:
                 // Short press: trigger network steering (rejoin/find new network)
-                ESP_LOGI(TAG, "Commission button: start network steering");
-                ZB_LOCKED(esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING));
-                {
+                if (s_network_joined) {
+                    ESP_LOGI(TAG, "Commission button: already joined");
+                    led_state_t led_state = LED_COLOR_STATE_BLINK_ONCE_GREEN;
+                    xQueueSend(led_evt_queue, &led_state, 0);
+                } else {
+                    ESP_LOGI(TAG, "Commission button: start network steering");
+                    ZB_LOCKED(esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING));
                     led_state_t led_state = LED_COLOR_STATE_BLINK_ONCE_YELLOW;
                     xQueueSend(led_evt_queue, &led_state, 0);
                 }
@@ -359,31 +365,28 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
         esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
         break;
     case ESP_ZB_BDB_SIGNAL_DEVICE_FIRST_START:
-    case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT:
-        if (err_status == ESP_OK) {
-    //         esp_zb_factory_reset();
-            #ifdef DEBUG_ENABLED
-            ESP_LOGI(TAG, "Device started up in %s factory-reset mode", esp_zb_bdb_is_factory_new() ? "" : "non");
-            #endif
-            if (esp_zb_bdb_is_factory_new()) {
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Start network steering");
-                #endif
-                esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
-            } else {
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Device rebooted");
-                ESP_LOGI(TAG, "Start network steering");
-                #endif
-                esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
-            }
-        } else {
+    case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT: {
+        led_state_t led_state_start = LED_COLOR_STATE_WARN_RED;
+        if (err_status != ESP_OK) {
             ESP_LOGE(TAG, "Failed to initialize Zigbee stack (status: %s), retrying in 1s", esp_err_to_name(err_status));
             esp_zb_scheduler_alarm((esp_zb_callback_t)bdb_start_top_level_commissioning_cb, ESP_ZB_BDB_MODE_INITIALIZATION, 1000);
+        } else if (esp_zb_bdb_is_factory_new()) {
+            #ifdef DEBUG_ENABLED
+            ESP_LOGI(TAG, "Factory-new device: start network steering");
+            #endif
+            esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_NETWORK_STEERING);
+        } else {
+            /* Already on a network: steering here would only broadcast permit-join. */
+            ESP_LOGI(TAG, "Device rebooted, network restored");
+            s_network_joined = true;
+            led_state_start = LED_COLOR_STATE_OFF;
+            xQueueSend(led_evt_queue, &led_state_start, 0);
+            led_state_start = LED_COLOR_STATE_BLINK_ONCE_GREEN;
+            ota_confirm_running_image();
         }
-        led_state_t led_state_warn = LED_COLOR_STATE_WARN_RED;
-        xQueueSend(led_evt_queue, &led_state_warn, 0);
+        xQueueSend(led_evt_queue, &led_state_start, 0);
         break;
+    }
     case ESP_ZB_BDB_SIGNAL_STEERING:
         if (err_status == ESP_OK) {
             esp_zb_ieee_addr_t extended_pan_id;
@@ -396,7 +399,9 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t *signal_struct)
             #endif
             
         s_network_joined = true;
-        led_state_t led_state_success = LED_COLOR_STATE_BLINK_ONCE_GREEN;
+        led_state_t led_state_success = LED_COLOR_STATE_OFF;
+        xQueueSend(led_evt_queue, &led_state_success, 0);
+        led_state_success = LED_COLOR_STATE_BLINK_ONCE_GREEN;
         xQueueSend(led_evt_queue, &led_state_success, 0);
 
         /* Joining proves the stack/radio work: confirm a pending OTA image so it
@@ -523,31 +528,9 @@ static void encoder_task(void *pvParameters) {
 
     while (1)
     {
-        // Safety check: periodically verify button state isn't stuck
-        // This runs every iteration (every 1000ms timeout or when event received)
-        {
-            TickType_t now = xTaskGetTickCount();
-            taskENTER_CRITICAL(&enc->mux);
-            if (enc->button_down) {
-                TickType_t elapsed_ticks = now - enc->press_tick;
-                if (elapsed_ticks > pdMS_TO_TICKS(BUTTON_STATE_TIMEOUT_MS)) {
-                    // Button state has been "down" for too long - force reset
-                    enc->button_down = false;
-                    enc->rotated_while_pressed = false;
-                    taskEXIT_CRITICAL(&enc->mux);
-                    ESP_LOGW(TAG, "Button state timeout after %lu ms - force reset",
-                             (unsigned long)(elapsed_ticks * portTICK_PERIOD_MS));
-                } else {
-                    taskEXIT_CRITICAL(&enc->mux);
-                }
-            } else {
-                taskEXIT_CRITICAL(&enc->mux);
-            }
-        }
-
         // Wait for incoming events on the event queue.
         rotary_encoder_event_t event = { 0 };
-        if (xQueueReceive(encoder_event_queue, &event, 1000 / portTICK_PERIOD_MS) == pdTRUE)
+        if (xQueueReceive(encoder_event_queue, &event, portMAX_DELAY) == pdTRUE)
         {
             // Read button state and press time atomically
             bool button_down;
