@@ -521,6 +521,7 @@ static void encoder_task(void *pvParameters) {
     // Create a queue for events from the rotary encoder driver.
     // Tasks can read from this queue to receive up to date position information.
     QueueHandle_t encoder_event_queue = rotary_encoder_create_queue();
+    rotary_encoder_position_t last_position = 0;
     ESP_ERROR_CHECK(rotary_encoder_set_queue(&encoder_info, encoder_event_queue));
     #ifdef DEBUG_ENABLED
     ESP_LOGI(TAG, "Queue created");
@@ -546,6 +547,16 @@ static void encoder_task(void *pvParameters) {
                      button_down ? "DOWN" : "UP");
             #endif
 
+            /* The queue keeps only the latest event, so use the position
+               difference to cover detents turned while a command was sending. */
+            rotary_encoder_position_t delta = event.state.position - last_position;
+            last_position = event.state.position;
+            if (delta == 0) {
+                continue;
+            }
+            bool clockwise = delta > 0;
+            uint32_t steps = clockwise ? delta : -delta;
+
             if (button_down) {
                 // Button is pressed - check if we're past the debounce period
                 TickType_t now = xTaskGetTickCount();
@@ -564,10 +575,10 @@ static void encoder_task(void *pvParameters) {
                     esp_zb_zcl_color_step_color_temperature_cmd_t cmd_req;
                     cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
                     cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                    cmd_req.move_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE
+                    cmd_req.move_mode = clockwise
                                         ? ESP_ZB_ZCL_CMD_COLOR_CONTROL_STEP_UP
                                         : ESP_ZB_ZCL_CMD_COLOR_CONTROL_STEP_DOWN;
-                    cmd_req.step_size = 25;                  // mireds per detent
+                    cmd_req.step_size = 25 * steps;          // mireds per detent
                     cmd_req.transition_time = 1;
                     cmd_req.color_temperature_minimum = 153; // ~6500 K (cool)
                     cmd_req.color_temperature_maximum = 500; // ~2000 K (warm)
@@ -587,8 +598,8 @@ static void encoder_task(void *pvParameters) {
                 esp_zb_zcl_level_step_cmd_t cmd_req;
                 cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
                 cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                cmd_req.step_mode = event.state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? ZCL_STEP_MODE_UP : ZCL_STEP_MODE_DOWN;
-                cmd_req.step_size = 15;
+                cmd_req.step_mode = clockwise ? ZCL_STEP_MODE_UP : ZCL_STEP_MODE_DOWN;
+                cmd_req.step_size = 15 * steps > 255 ? 255 : 15 * steps;
                 cmd_req.transition_time = 1;
                 #ifdef DEBUG_ENABLED
                 ESP_LOGI(TAG, "Send 'level step' command");
