@@ -32,7 +32,7 @@ extern "C" {
 #define ROT_ENC_A_GPIO GPIO_NUM_21
 #define ROT_ENC_B_GPIO GPIO_NUM_22
 
-#define ENABLE_HALF_STEPS true  // Set to true to enable tracking of rotary encoder at half step resolution
+#define ENABLE_HALF_STEPS false // KY-040/EC11 20-detent: one full quadrature cycle per click, so half-step would count 2 per click
 #define RESET_AT          0      // Set to a positive non-zero number to reset the position if this value is exceeded
 #define FLIP_DIRECTION    true   // Set to true to reverse the clockwise/counterclockwise sense
 
