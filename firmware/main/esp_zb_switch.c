@@ -115,17 +115,19 @@ static encoder_ctrl_t s_ext_encoder = {
 
 // Send a bound ZCL command, but only while we're actually on a network. Either
 // way the user gets LED feedback: a white blink when the command is sent, a red
-// blink when it's dropped because the device isn't joined.
-#define ZB_SEND_CMD(stmt) do {                                       \
-        led_state_t _fb;                                             \
-        if (s_network_joined) {                                      \
-            ZB_LOCKED(stmt);                                         \
-            _fb = LED_COLOR_STATE_BLINK_ONCE_WHITE;                  \
-        } else {                                                     \
-            ESP_LOGW(TAG, "Not joined; dropped: %s", #stmt);         \
-            _fb = LED_COLOR_STATE_BLINK_ONCE_RED;                    \
-        }                                                            \
-        xQueueSend(led_evt_queue, &_fb, 0);                          \
+// blink when it's dropped (not joined, or the stack lock timed out).
+#define ZB_SEND_CMD(stmt) do {                                                        \
+        led_state_t _fb = LED_COLOR_STATE_BLINK_ONCE_RED;                             \
+        if (!s_network_joined) {                                                      \
+            ESP_LOGW(TAG, "Not joined; dropped: %s", #stmt);                          \
+        } else if (esp_zb_lock_acquire(pdMS_TO_TICKS(ZB_STACK_LOCK_TIMEOUT_MS))) {    \
+            stmt;                                                                     \
+            esp_zb_lock_release();                                                    \
+            _fb = LED_COLOR_STATE_BLINK_ONCE_WHITE;                                   \
+        } else {                                                                      \
+            ESP_LOGW(TAG, "Zigbee stack lock timeout, dropped: %s", #stmt);           \
+        }                                                                             \
+        xQueueSend(led_evt_queue, &_fb, 0);                                           \
     } while (0)
 
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
