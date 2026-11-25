@@ -65,6 +65,7 @@ typedef struct {
     volatile bool button_down;
     volatile bool rotated_while_pressed;
     volatile TickType_t press_tick;
+    TaskHandle_t click_task;               // resolves single vs double click
 } encoder_ctrl_t;
 
 static encoder_ctrl_t s_onboard_encoder = {
@@ -94,6 +95,12 @@ static encoder_ctrl_t s_ext_encoder = {
 #define ENCODER_TRANSITION_DS 3           /* fade per command, 1/10 s; keep > interval */
 #define ENCODER_LEVEL_STEP_PER_CLICK 18   /* brightness per detent (0..254 range) */
 #define ENCODER_LEVEL_STEP_MAX 120        /* guard against bounce-inflated counts */
+
+/* Button presets: double-click = full brightness, hold then release = minimum. */
+#define BUTTON_DOUBLE_CLICK_MS 400      /* wait this long after a click for a second one; also the single-click delay */
+#define LEVEL_PRESET_MAX 254
+#define LEVEL_PRESET_MIN 2              /* not 1: a "with on/off" move down to the minimum level turns the bulb OFF (ZCL), seen on Aqara T2 */
+#define LEVEL_PRESET_TRANSITION_DS 5    /* 0.5 s */
 
 // ZCL step mode values (spec section 3.10.2.3.1 / 5.2.2.3.1)
 #define ZCL_STEP_MODE_UP   0x00
@@ -142,11 +149,54 @@ static encoder_ctrl_t s_ext_encoder = {
 
 static const char *TAG = "ESP_ZB_ON_OFF_SWITCH";
 
+// Go to a fixed brightness, turning the light on if it is off.
+static void send_level_preset(encoder_ctrl_t *enc, uint8_t level)
+{
+    esp_zb_zcl_move_to_level_cmd_t cmd_req;
+    cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
+    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+    cmd_req.level = level;
+    cmd_req.transition_time = LEVEL_PRESET_TRANSITION_DS;
+    #ifdef DEBUG_ENABLED
+    ESP_LOGI(TAG, "Send 'move to level with on/off' %d", level);
+    #endif
+    ZB_SEND_CMD(esp_zb_zcl_level_move_to_level_with_onoff_cmd_req(&cmd_req));
+}
+
+// One per encoder. Each short click notifies this task; it waits
+// BUTTON_DOUBLE_CLICK_MS to see whether a second click follows, so a
+// double-click never toggles the light first.
+static void click_task(void *pvParameters)
+{
+    encoder_ctrl_t *enc = (encoder_ctrl_t *)pvParameters;
+    const TickType_t window = pdMS_TO_TICKS(BUTTON_DOUBLE_CLICK_MS);
+
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);          // first click
+        if (ulTaskNotifyTake(pdTRUE, window) == 0) {      // no second click: single
+            esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
+            toggle_cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
+            toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+            toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
+            #ifdef DEBUG_ENABLED
+            ESP_LOGI(TAG, "Send 'on_off toggle' command");
+            #endif
+            ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
+            continue;
+        }
+        send_level_preset(enc, LEVEL_PRESET_MAX);         // double-click
+        while (ulTaskNotifyTake(pdTRUE, window)) {        // ignore third and later
+        }
+    }
+}
+
 // Handle a press/hold/release event for an encoder's push-button. Shared by both
 // the on-board encoder (EP1) and the external encoder (EP3); `enc` selects which
-// instance's state and source endpoint to use. Mirrors the button+rotate
-// interaction: short press = toggle, hold = off, and either is suppressed if the
-// encoder was rotated while the button was held (that gesture is color-temp).
+// instance's state and source endpoint to use. Short press = toggle, double
+// short press = full brightness (both resolved in click_task); hold 0.5s =
+// minimum brightness, sent while still held. Rotating while the button is held
+// is the color-temp gesture and suppresses the click; it suppresses the hold
+// action only if the rotation starts within the first 0.5s.
 static void handle_encoder_button(encoder_ctrl_t *enc, switch_state_t state)
 {
     #ifdef DEBUG_ENABLED
@@ -167,7 +217,7 @@ static void handle_encoder_button(encoder_ctrl_t *enc, switch_state_t state)
             break;
 
         case SWITCH_RELEASE_DETECTED: {
-            // Short press release: send toggle only if encoder didn't rotate
+            // Short press release: count as a click only if encoder didn't rotate
             bool rotated;
             taskENTER_CRITICAL(&enc->mux);
             rotated = enc->rotated_while_pressed;
@@ -176,56 +226,34 @@ static void handle_encoder_button(encoder_ctrl_t *enc, switch_state_t state)
             taskEXIT_CRITICAL(&enc->mux);
 
             if (!rotated) {
-                esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
-                toggle_cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
-                toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                toggle_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Send 'on_off toggle' command");
-                #endif
-                ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&toggle_cmd_req));
+                xTaskNotifyGive(enc->click_task);
             } else {
                 #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Toggle suppressed - encoder rotated while pressed");
+                ESP_LOGI(TAG, "Click suppressed - encoder rotated while pressed");
                 #endif
             }
             break;
         }
 
         case SWITCH_LONG_RELEASE_DETECTED:
-        case SWITCH_HOLD_RELEASE_DETECTED: {
-            // Released after any hold >=0.5s (both the 0.5-5s and >5s paths):
-            // send off if the encoder didn't rotate. Handling both releases
-            // removes the dead zone where a >5s hold used to do nothing.
-            bool rotated;
+        case SWITCH_HOLD_RELEASE_DETECTED:
+            // Released after a hold: the action (minimum brightness, or the
+            // color-temp rotation) already happened while held; just clear state.
             taskENTER_CRITICAL(&enc->mux);
-            rotated = enc->rotated_while_pressed;
             enc->button_down = false;
             enc->rotated_while_pressed = false;
             taskEXIT_CRITICAL(&enc->mux);
-
-            if (!rotated) {
-                esp_zb_zcl_on_off_cmd_t off_cmd_req;
-                off_cmd_req.zcl_basic_cmd.src_endpoint = enc->src_endpoint;
-                off_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-                off_cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_OFF_ID;
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Send 'on_off off' command");
-                #endif
-                ZB_SEND_CMD(esp_zb_zcl_on_off_cmd_req(&off_cmd_req));
-            } else {
-                #ifdef DEBUG_ENABLED
-                ESP_LOGI(TAG, "Off suppressed - encoder rotated while pressed");
-                #endif
-            }
             break;
-        }
 
         case SWITCH_LONG_PRESS_DETECTED:
-            // Long press detected (button still held): no action needed, state stays
+            // Held 0.5s without rotating: go to minimum brightness right away.
+            // If the user is already rotating, this is the color-temp gesture.
             #ifdef DEBUG_ENABLED
             ESP_LOGI(TAG, "Long press detected, button still held");
             #endif
+            if (!enc->rotated_while_pressed) {
+                send_level_preset(enc, LEVEL_PRESET_MIN);
+            }
             break;
 
         case SWITCH_HOLD_DETECTED:
@@ -654,6 +682,13 @@ void app_main(void) {
     setup_led_strip(led_evt_queue);
     led_state_t led_state_init = LED_COLOR_STATE_WARN_RED;
     xQueueSend(led_evt_queue, &led_state_init, 0);
+
+    // Click tasks must exist before the button driver can deliver events.
+    if (xTaskCreate(click_task, "Click_main", 4096, &s_onboard_encoder, 5, &s_onboard_encoder.click_task) != pdPASS ||
+        xTaskCreate(click_task, "Click_ext", 4096, &s_ext_encoder, 5, &s_ext_encoder.click_task) != pdPASS) {
+        ESP_LOGE(TAG, "Failed to create click tasks, rebooting");
+        esp_restart();
+    }
 
     if (!switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair), esp_zb_buttons_handler)) {
         ESP_LOGE(TAG, "Switch driver init failed, rebooting");
