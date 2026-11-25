@@ -7,6 +7,7 @@
 #include "esp_system.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
+#include "esp_timer.h"
 
 #include "zcl/esp_zigbee_zcl_ota.h"
 
@@ -97,8 +98,33 @@ esp_err_t ota_add_cluster(esp_zb_cluster_list_t *cluster_list)
     return esp_zb_cluster_list_add_ota_cluster(cluster_list, ota_attr, ESP_ZB_ZCL_CLUSTER_CLIENT_ROLE);
 }
 
+static bool ota_image_pending_verify(void)
+{
+    esp_ota_img_states_t state;
+    return esp_ota_get_state_partition(esp_ota_get_running_partition(), &state) == ESP_OK &&
+           state == ESP_OTA_IMG_PENDING_VERIFY;
+}
+
+static void ota_verify_timeout_cb(void *arg)
+{
+    (void)arg;
+    if (ota_image_pending_verify()) {
+        ESP_LOGE(TAG, "New OTA image not confirmed within %d min; rolling back", OTA_VERIFY_TIMEOUT_MIN);
+        esp_ota_mark_app_invalid_rollback_and_reboot();
+    }
+}
+
 void ota_client_start(uint8_t endpoint)
 {
+    if (ota_image_pending_verify()) {
+        const esp_timer_create_args_t timer_args = {
+            .callback = ota_verify_timeout_cb,
+            .name = "ota_verify",
+        };
+        esp_timer_handle_t timer;
+        ESP_ERROR_CHECK(esp_timer_create(&timer_args, &timer));
+        ESP_ERROR_CHECK(esp_timer_start_once(timer, OTA_VERIFY_TIMEOUT_MIN * 60ULL * 1000000ULL));
+    }
     esp_zb_ota_upgrade_client_query_interval_set(endpoint, OTA_UPGRADE_QUERY_INTERVAL_MIN);
     ESP_LOGI(TAG, "OTA client started on ep %u, querying every %d min (running v0x%08x)",
              endpoint, OTA_UPGRADE_QUERY_INTERVAL_MIN, (unsigned)OTA_UPGRADE_FILE_VERSION);
@@ -112,10 +138,7 @@ void ota_confirm_running_image(void)
      * health check -- so cancel the pending rollback and keep the new image. If
      * the new image had instead crashed/wedged before this point, the watchdog
      * reboot would let the bootloader revert to the previous working image. */
-    const esp_partition_t *running = esp_ota_get_running_partition();
-    esp_ota_img_states_t state;
-    if (esp_ota_get_state_partition(running, &state) == ESP_OK &&
-        state == ESP_OTA_IMG_PENDING_VERIFY) {
+    if (ota_image_pending_verify()) {
         esp_err_t err = esp_ota_mark_app_valid_cancel_rollback();
         if (err == ESP_OK) {
             ESP_LOGW(TAG, "New OTA image confirmed healthy (rejoined network); rollback cancelled");
