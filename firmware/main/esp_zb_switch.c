@@ -253,7 +253,13 @@ static void esp_zb_buttons_handler(switch_func_pair_t *button_func_pair, switch_
     if (button_func_pair->func == SWITCH_EXT_SWITCH_CONTROL) {
         // External plain wall switch on EP4: toggle the bound target on each
         // press. No level/color gesture -- it's a one-contact switch.
-        if (state == SWITCH_RELEASE_DETECTED) {
+        bool toggle = (state == SWITCH_RELEASE_DETECTED);
+        if (EXT_SWITCH_LATCHING) {
+            toggle = toggle || state == SWITCH_PRESS_DETECTED
+                            || state == SWITCH_LONG_RELEASE_DETECTED
+                            || state == SWITCH_HOLD_RELEASE_DETECTED;
+        }
+        if (toggle) {
             esp_zb_zcl_on_off_cmd_t toggle_cmd_req;
             toggle_cmd_req.zcl_basic_cmd.src_endpoint = HA_EXT_SWITCH_ENDPOINT;
             toggle_cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
